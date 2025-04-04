@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Upload, 
@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
+import { ResumeParserResponse } from '@/types/openai';
+import { parseResume } from '@/lib/actions/resume-parser';
 
 import { useAuth } from '@/lib/hooks/useAuth';
 import { NavBar } from '@/components/ui/nav-bar';
@@ -33,6 +35,10 @@ export default function ResumePage() {
   const [resumeUploaded, setResumeUploaded] = useState(false);
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
   const [dragActive, setDragActive] = useState(false);
+  const [resumeParsed, setResumeParsed] = useState<ResumeParserResponse | null>(null);
+  const [fileName, setFileName] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     // If not authenticated, redirect to sign-in
@@ -41,20 +47,57 @@ export default function ResumePage() {
     }
   }, [user, loading, router]);
 
-  // Simulate resume upload functionality
-  const handleUpload = () => {
-    setUploadState('uploading');
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
     
-    // Simulate API delay
-    setTimeout(() => {
+    setFileName(file.name);
+    setUploadState('uploading');
+    setErrorMessage("");
+    
+    try {
+      // Extract text from PDF using PDF.js (client-side)
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfjs = await import('pdfjs-dist');
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.mjs`;
+      
+      const typedArray = new Uint8Array(arrayBuffer);
+      const pdf = await pdfjs.getDocument(typedArray).promise;
+      let extractedText = "";
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        extractedText +=
+          textContent.items.map((item) => 'str' in item ? item.str : '').join(" ") + "\n";
+      }
+      
+      // Now process with server action
       setUploadState('processing');
       
-      // Simulate processing delay
-      setTimeout(() => {
-        setUploadState('success');
-        setResumeUploaded(true);
-      }, 2000);
-    }, 1500);
+      // Send extracted text to server action for OpenAI processing
+      const result = await parseResume(extractedText);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to parse resume");
+      }
+      
+      // Set the parsed resume data
+      setResumeParsed(result.data || null);
+      setUploadState('success');
+      setResumeUploaded(true);
+      
+    } catch (error) {
+      console.error("Error processing resume:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to process resume");
+      setUploadState('error');
+    }
+  };
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
   };
 
   // File drag handlers
@@ -75,8 +118,12 @@ export default function ResumePage() {
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleUpload();
+      handleFileUpload(e.dataTransfer.files[0]);
     }
+  };
+
+  const handleClickUpload = () => {
+    fileInputRef.current?.click();
   };
 
   if (loading) {
@@ -125,9 +172,16 @@ export default function ResumePage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pb-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
                     <div 
                       className="flex flex-col items-center justify-center py-12 cursor-pointer"
-                      onClick={() => uploadState === 'idle' && handleUpload()}
+                      onClick={() => uploadState === 'idle' && handleClickUpload()}
                       onDragEnter={handleDrag}
                       onDragLeave={handleDrag}
                       onDragOver={handleDrag}
@@ -141,7 +195,7 @@ export default function ResumePage() {
                           <div className="text-center space-y-2">
                             <h3 className="text-xl font-medium">Upload your resume</h3>
                             <p className="text-muted-foreground max-w-sm">
-                              Support for PDF, DOCX, and TXT files up to 5MB
+                              Support for PDF files up to 5MB
                             </p>
                           </div>
                         </div>
@@ -153,8 +207,8 @@ export default function ResumePage() {
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
                           </div>
                           <div className="text-center">
-                            <h3 className="text-xl font-medium">Uploading...</h3>
-                            <p className="text-muted-foreground">Please wait while we upload your file</p>
+                            <h3 className="text-xl font-medium">Extracting Text...</h3>
+                            <p className="text-muted-foreground">Please wait while we read your PDF file</p>
                           </div>
                         </div>
                       )}
@@ -186,11 +240,13 @@ export default function ResumePage() {
                       {uploadState === 'error' && (
                         <div className="flex flex-col items-center gap-4">
                           <div className="flex items-center justify-center h-24 w-24 rounded-full bg-red-100 dark:bg-red-900/30">
-                            <div className="text-red-600 dark:text-red-400">!</div>
+                            <div className="text-red-600 dark:text-red-400 text-5xl font-bold">!</div>
                           </div>
                           <div className="text-center">
                             <h3 className="text-xl font-medium">Upload Failed</h3>
-                            <p className="text-muted-foreground">Please try again or use a different file format</p>
+                            <p className="text-muted-foreground">
+                              {errorMessage || "Please try again or use a different file format"}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -198,7 +254,7 @@ export default function ResumePage() {
                   </CardContent>
                   <CardFooter className="justify-center pt-2 pb-6">
                     {uploadState === 'idle' && (
-                      <Button onClick={handleUpload} className="gap-2">
+                      <Button onClick={handleClickUpload} className="gap-2">
                         <Upload className="h-4 w-4" />
                         Select File
                       </Button>
@@ -235,41 +291,124 @@ export default function ResumePage() {
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                       <File className="h-8 w-8 text-primary/70" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">resume-2025.pdf</p>
+                        <p className="text-sm font-medium truncate">{fileName || "resume.pdf"}</p>
                         <p className="text-xs text-muted-foreground">Uploaded on {new Date().toLocaleDateString()}</p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => {
+                        setUploadState('idle');
+                        setResumeUploaded(false);
+                        setResumeParsed(null);
+                      }}>
                         <Upload className="h-4 w-4 mr-2" />
                         Replace
                       </Button>
                     </div>
 
-                    {/* Parsed skills section */}
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-medium">Identified Skills</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {['JavaScript', 'React', 'TypeScript', 'Next.js', 'Node.js', 'UI/UX Design', 'Project Management', 'Communication'].map((skill) => (
-                          <div key={skill} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                            {skill}
+                    {resumeParsed && (
+                      <>
+                        {/* Parsed skills section */}
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-medium">Technical Skills</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {resumeParsed.parsed_skills.technical.map((skill, idx) => (
+                              <div key={idx} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                {skill.skill} {skill.level && `(${skill.level}${skill.years ? `, ${skill.years} yrs` : ''})`}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
 
-                    {/* Experience section */}
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-medium">Experience Summary</h3>
-                      <div className="space-y-2">
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                          <p className="text-sm font-medium">Senior Developer at Example Corp</p>
-                          <p className="text-xs text-muted-foreground">3 years experience</p>
+                        <div className="space-y-2">
+                          <h3 className="text-lg font-medium">Soft Skills</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {resumeParsed.parsed_skills.soft.map((skill, idx) => (
+                              <div key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-sm">
+                                {skill.skill} {skill.context && `(${skill.context})`}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="p-3 bg-muted/50 rounded-lg">
-                          <p className="text-sm font-medium">Frontend Developer at Tech Innovators</p>
-                          <p className="text-xs text-muted-foreground">2 years experience</p>
-                        </div>
-                      </div>
-                    </div>
+
+                        {resumeParsed.parsed_skills.certifications && resumeParsed.parsed_skills.certifications.length > 0 && (
+                          <div className="space-y-2">
+                            <h3 className="text-lg font-medium">Certifications</h3>
+                            <div className="flex flex-wrap gap-2">
+                              {resumeParsed.parsed_skills.certifications.map((cert, idx) => (
+                                <div key={idx} className="px-3 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 rounded-full text-sm">
+                                  {cert.name} {cert.year && `(${cert.year})`}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experience section */}
+                        {resumeParsed.experience.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="text-lg font-medium">Experience Summary</h3>
+                            <div className="space-y-2">
+                              {resumeParsed.experience.map((exp, index) => (
+                                <div key={index} className="p-3 bg-muted/50 rounded-lg">
+                                  <p className="text-sm font-medium">{exp.title} at {exp.company}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {exp.duration.years} year{exp.duration.years !== 1 ? 's' : ''} 
+                                    {exp.duration.months > 0 ? `, ${exp.duration.months} month${exp.duration.months !== 1 ? 's' : ''}` : ''}
+                                  </p>
+                                  {exp.highlights.length > 0 && (
+                                    <ul className="text-xs mt-2 list-disc list-inside space-y-1">
+                                      {exp.highlights.map((highlight, i) => (
+                                        <li key={i}>{highlight}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Education section */}
+                        {resumeParsed.education.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="text-lg font-medium">Education</h3>
+                            <div className="space-y-2">
+                              {resumeParsed.education.map((edu, index) => (
+                                <div key={index} className="p-3 bg-muted/50 rounded-lg">
+                                  <p className="text-sm font-medium">{edu.degree}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {edu.institution} {edu.year && `(${edu.year})`}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Projects section */}
+                        {resumeParsed.projects && resumeParsed.projects.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="text-lg font-medium">Projects</h3>
+                            <div className="space-y-2">
+                              {resumeParsed.projects.map((project, index) => (
+                                <div key={index} className="p-3 bg-muted/50 rounded-lg">
+                                  <p className="text-sm font-medium">{project.name}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{project.description}</p>
+                                  {project.technologies.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                      {project.technologies.map((tech, i) => (
+                                        <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-xs rounded-full">
+                                          {tech}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                   <CardFooter className="flex-col items-start gap-4">
                     <p className="text-sm text-muted-foreground">
