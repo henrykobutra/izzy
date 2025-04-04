@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   MessageSquare,
-  Sparkles,
   Bot,
   Search,
   BarChart,
@@ -15,38 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { NavBar } from "@/components/ui/nav-bar";
+import { Footer } from "@/components/ui/footer";
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
-        <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between py-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <Sparkles className="h-6 w-6" />
-            <span className="font-bold text-xl">Izzy</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link
-              href="/about"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              About
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              How It Works
-            </Link>
-            <Button size="sm" asChild>
-              <Link href="/get-started">Get Started</Link>
-            </Button>
-          </nav>
-          <Button size="sm" className="md:hidden" asChild>
-            <Link href="/get-started">Get Started</Link>
-          </Button>
-        </div>
-      </header>
+      <NavBar activePath="/" />
       
       <main className="flex-1">
         {/* Hero Section */}
@@ -209,42 +183,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="w-full border-t py-8">
-        <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-              © 2025 Izzy AI. All rights reserved.
-            </p>
-          </div>
-          <div className="flex gap-6">
-            <Link
-              href="/about"
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              About
-            </Link>
-            <Link
-              href="/terms"
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              Terms
-            </Link>
-            <Link
-              href="/privacy"
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="https://github.com/henrykobutra/izzy"
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              GitHub
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
