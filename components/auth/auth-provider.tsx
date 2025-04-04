@@ -11,6 +11,8 @@ type AuthState = {
 };
 
 type AuthContextType = AuthState & {
+  requestEmailOtp: (email: string) => Promise<{ success: boolean; error?: Error }>;
+  verifyEmailOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: Error }>;
   signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -55,6 +57,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
 
+  const requestEmailOtp = async (email: string): Promise<{ success: boolean; error?: Error }> => {
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: true,
+        }
+      });
+      
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error requesting email OTP:', error);
+      return { success: false, error: error as Error };
+    }
+  };
+  
+  const verifyEmailOtp = async (email: string, otp: string): Promise<{ success: boolean; error?: Error }> => {
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error verifying email OTP:', error);
+      return { success: false, error: error as Error };
+    }
+  };
+
   const signInAnonymously = async () => {
     const supabase = createClient();
     await supabase.auth.signInAnonymously();
@@ -69,6 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         ...authState,
+        requestEmailOtp,
+        verifyEmailOtp,
         signInAnonymously,
         signOut,
       }}

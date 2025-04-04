@@ -43,6 +43,42 @@ export function useAuth() {
     };
   }, [router, supabase.auth]);
 
+  // Email OTP Sign-in - Step 1: Request OTP
+  const requestEmailOtp = async (email: string): Promise<{ success: boolean; error?: Error }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          // No redirect URL needed since we're verifying with OTP code
+          shouldCreateUser: true,
+        }
+      });
+      
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error requesting email OTP:', error);
+      return { success: false, error: error as Error };
+    }
+  };
+  
+  // Email OTP Sign-in - Step 2: Verify OTP
+  const verifyEmailOtp = async (email: string, otp: string): Promise<{ success: boolean; error?: Error }> => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+      
+      if (error) throw error;
+      router.push('/get-started');
+      return { success: true };
+    } catch (error) {
+      console.error('Error verifying email OTP:', error);
+      return { success: false, error: error as Error };
+    }
+  };
 
   const signInAnonymously = async () => {
     try {
@@ -62,6 +98,8 @@ export function useAuth() {
   return {
     user,
     loading,
+    requestEmailOtp,
+    verifyEmailOtp,
     signInAnonymously,
     signOut,
   };
