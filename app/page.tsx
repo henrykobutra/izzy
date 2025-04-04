@@ -38,7 +38,7 @@ export default function Home() {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
                 <Button asChild>
-                  <Link href="/get-started">
+                  <Link href="/sign-in">
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -172,7 +172,7 @@ export default function Home() {
               </div>
               <div className="pt-8">
                 <Button size="lg" asChild>
-                  <Link href="/get-started">
+                  <Link href="/sign-in">
                     Try It Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
