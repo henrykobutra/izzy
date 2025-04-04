@@ -169,7 +169,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-bold">Practice Interviews</h3>
               <p className="text-center text-muted-foreground">
-                Engage in realistic interview simulations with Izzy's AI.
+                Engage in realistic interview simulations with Izzy&apos;s AI.
               </p>
             </div>
             <div className="relative flex flex-col items-center space-y-2 border rounded-md p-6 bg-background">
@@ -209,9 +209,9 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  "After practicing with Izzy for just a week, I felt so much
+                  &quot;After practicing with Izzy for just a week, I felt so much
                   more confident in my technical interviews. I landed a job at a
-                  top tech company that I never thought was possible!"
+                  top tech company that I never thought was possible!&quot;
                 </p>
               </CardContent>
             </Card>
@@ -222,9 +222,9 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  "Izzy helped me structure my responses using the STAR method,
+                  &quot;Izzy helped me structure my responses using the STAR method,
                   which made a huge difference in how I communicated my
-                  experience. I received three job offers after using Izzy!"
+                  experience. I received three job offers after using Izzy!&quot;
                 </p>
               </CardContent>
             </Card>
