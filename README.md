@@ -26,6 +26,8 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
 - Node.js 18.x or later
 - pnpm package manager
 - Supabase CLI (for local development)
+- OpenAI API key
+- Google Cloud Project (for Google authentication)
 
 ### Installation
 
@@ -61,7 +63,19 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
 
 ### Supabase Setup
 
-This project uses Supabase for authentication and database. To run locally:
+This project requires Supabase for authentication (including anonymous auth and Google login) and database functionality. You have two options:
+
+#### Option 1: Supabase Cloud (Recommended for deployment)
+
+1. Create a free Supabase project at [https://supabase.com](https://supabase.com)
+2. Get your project URL and anon key from the project settings
+3. Add these to your `.env` file
+4. Push migrations to your remote database:
+   ```bash
+   supabase db push
+   ```
+
+#### Option 2: Local Supabase Instance (Recommended for development)
 
 1. Install Supabase CLI following [official instructions](https://supabase.com/docs/guides/cli)
 2. Start the local Supabase instance:
@@ -72,6 +86,42 @@ This project uses Supabase for authentication and database. To run locally:
    ```bash
    supabase db push
    ```
+4. Use the local URL and key provided when you run `supabase start`
+
+### Google Authentication Setup
+
+For Google authentication to work properly:
+
+1. Create a Google Cloud project and configure OAuth consent screen
+2. Create OAuth credentials (Web application type)
+3. Add authorized redirect URIs:
+   - For local development: `http://localhost:3000/auth/callback`
+   - For production: `https://your-domain.com/auth/callback`
+4. Configure Google provider in your Supabase project settings
+5. Follow the detailed instructions in the [Supabase Google Auth guide](https://supabase.com/docs/guides/auth/social-login/auth-google)
+
+## Deployment
+
+Izzy can be deployed to any platform that supports Next.js applications. The live project uses Vercel for seamless deployment.
+
+### Deploying to Vercel
+
+1. Fork this repository to your GitHub account
+2. Create a new project on [Vercel](https://vercel.com)
+3. Connect your GitHub repository
+4. Configure environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `OPENAI_API_KEY`
+5. Deploy
+
+### Other Hosting Options
+
+You can also deploy to Netlify, Railway, or any other platform that supports Next.js applications. Make sure to:
+
+1. Set up the required environment variables
+2. Configure build command: `pnpm build`
+3. Configure output directory: `.next`
 
 ## Tech Stack
 
