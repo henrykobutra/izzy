@@ -212,7 +212,7 @@ export default function SignInPage() {
             <TabsContent value="anonymous">
               <CardContent className="grid gap-4 pt-4">
                 <p className="text-center text-sm text-muted-foreground mb-4">
-                  Izzy works without creating an account. Your data is securely stored and you can start practicing immediately.
+                  Izzy works without creating an account. Your data is securely stored and you can start practicing immediately. Anonymous user information will be removed after 24 hours.
                 </p>
                 <Button 
                   className="h-10" 
@@ -230,12 +230,18 @@ export default function SignInPage() {
             </TabsContent>
           </Tabs>
           
-          <CardFooter className="flex justify-center text-sm text-muted-foreground">
+          <CardFooter className="flex flex-col gap-2 justify-center text-sm text-muted-foreground">
             <p>
-              Your data will be saved locally {" "}
+              By logging in you agree to our {" "}
+              <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+                Terms
+              </Link> and {" "}
               <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
                 Privacy Policy
               </Link>
+            </p>
+            <p className="text-center text-xs">
+              Izzy is an academic project. While fully functional, continued support is not guaranteed. All data is kept secure.
             </p>
           </CardFooter>
         </Card>
