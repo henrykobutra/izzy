@@ -49,7 +49,7 @@ export default function AboutPage() {
               <div>
                 <h2 className="text-2xl font-bold mb-6">Project Background</h2>
                 <p className="text-muted-foreground mb-6">
-                  Izzy AI was developed as an academic project for Houston Community College's 
+                  Izzy AI was developed as an academic project for Houston Community College&apos;s 
                   ITAI 2376: Deep Learning course, under the guidance of Professor Patricia McManus.
                 </p>
                 <p className="text-muted-foreground">
@@ -140,7 +140,7 @@ export default function AboutPage() {
                   <CardContent>
                     <p className="text-muted-foreground">
                       Tailored interview questions based on your resume and specific job requirements, 
-                      ensuring you practice what's most relevant to your target role.
+                      ensuring you practice what&apos;s most relevant to your target role.
                     </p>
                   </CardContent>
                 </Card>
@@ -154,7 +154,7 @@ export default function AboutPage() {
                   <CardContent>
                     <p className="text-muted-foreground">
                       Get instant analysis on your responses with actionable
-                      suggestions for improvement. Learn what works and what doesn't.
+                      suggestions for improvement. Learn what works and what doesn&apos;t.
                     </p>
                   </CardContent>
                 </Card>
