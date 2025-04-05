@@ -50,7 +50,7 @@ export default function InterviewsPage() {
   
   // Custom hooks
   const { resumeUploaded, resumeData, resumeError } = useResumeCheck();
-  const { interviewSessions } = useInterviewSessions();
+  const { interviewSessions, setInterviewSessions } = useInterviewSessions();
   
   // Local state
   const [jobDescription, setJobDescription] = useState('');
@@ -290,7 +290,16 @@ export default function InterviewsPage() {
 
               <div className="space-y-4">
                 {recentSessions.map((session) => (
-                  <InterviewItem key={session.id} session={session} />
+                  <InterviewItem 
+                    key={session.id} 
+                    session={session} 
+                    onDelete={() => {
+                      // Update local state to reflect deletion
+                      setInterviewSessions(prevSessions => 
+                        prevSessions.filter(s => s.id !== session.id)
+                      );
+                    }} 
+                  />
                 ))}
               </div>
             </div>

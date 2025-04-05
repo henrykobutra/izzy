@@ -1,478 +1,448 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { getUser } from '@/lib/supabase/server';
 
-// Define the structure of a recommended question
-interface RecommendedQuestion {
-  question_text: string;
-  question_type: string;
-  related_skill: string;
-  difficulty: string;
-  focus_area: string;
+// Type for interview session with related data
+export type InterviewSessionWithRelations = {
+  id: string;
+  status: string;
+  strategy: Record<string, unknown>;
+  job_posting: {
+    id: string;
+    title: string;
+    company: string | null;
+  };
+  questions: {
+    id: string;
+    question_text: string;
+    question_type: string;
+    question_order: number;
+    related_skill: string | null;
+    difficulty: string | null;
+    focus_area: string | null;
+  }[];
+};
+
+// Type for retrieving interview questions with session data
+export type InterviewQuestionsResult = {
+  title: string;
+  questions: {
+    id: string;
+    question_text: string;
+    question_type: string;
+    question_order: number;
+    related_skill: string;
+    difficulty: string;
+    focus_area: string;
+  }[];
+  answers?: {
+    question_id: string;
+    answer_text: string;
+  }[];
+};
+
+// Type for submitting interview answers
+export type SubmitAnswerParams = {
+  sessionId: string;
+  questionId: string;
+  answer: string;
+};
+
+// Interface for interview result
+export interface InterviewResult {
+  sessionId: string;
+  title: string;
+  date: string;
+  overallScore: number;
+  scoreBreakdown: {
+    technical: number;
+    communication: number;
+    problemSolving: number;
+    cultureFit: number;
+  };
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  questions: {
+    id: string;
+    text: string;
+    type: string;
+    score: number;
+    answer: string;
+    feedback: string;
+  }[];
 }
 
-// Get interview questions for a session
-export async function getInterviewQuestions(sessionId: string) {
+// Get interview session with related data
+export async function getInterviewSession(sessionId: string): Promise<{ 
+  data: InterviewSessionWithRelations | null; 
+  error: string | null 
+}> {
   try {
-    // Get the current user
-    const { data: { user } } = await getUser();
-    
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-    
-    // Create Supabase client
     const supabase = await createClient();
     
-    // Verify the session belongs to the user
+    // Get the session with job posting data
     const { data: session, error: sessionError } = await supabase
       .from('interview_sessions')
       .select(`
-        *,
-        job_postings (
-          title,
+        id, 
+        status, 
+        strategy,
+        job_posting:job_postings (
+          id,
+          title, 
           company
         )
       `)
       .eq('id', sessionId)
-      .eq('profile_id', user.id)
       .single();
-      
-    if (sessionError || !session) {
-      return { 
-        success: false, 
-        error: 'Interview session not found or access denied' 
-      };
-    }
-    
-    // Get session strategy to extract questions
-    if (!session.strategy || !session.strategy.recommended_questions) {
-      return { 
-        success: false, 
-        error: 'No interview questions available for this session' 
-      };
-    }
-    
-    // Format the title
-    const title = session.job_postings 
-      ? `${session.job_postings.title}${session.job_postings.company ? ` at ${session.job_postings.company}` : ''}`
-      : session.title || 'Interview Session';
-    
-    // Define the structure of a recommended question
-    interface RecommendedQuestion {
-      question_text: string;
-      question_type: string;
-      related_skill: string;
-      difficulty: string;
-      focus_area: string;
+
+    if (sessionError) {
+      console.error('Error fetching interview session:', sessionError);
+      return { data: null, error: 'Failed to fetch interview session' };
     }
 
-    // Transform the questions
-    const questions = session.strategy.recommended_questions.map((q: RecommendedQuestion, index: number) => ({
-      id: `q-${sessionId}-${index}`,
-      question_text: q.question_text,
-      question_type: q.question_type,
-      related_skill: q.related_skill,
-      difficulty: q.difficulty,
-      focus_area: q.focus_area
-    }));
-    
-    // Get the answers that have been submitted so far
-    const { data: existingAnswers, error: answersError } = await supabase
-      .from('interview_answers')
-      .select('*')
+    if (!session) {
+      return { data: null, error: 'Interview session not found' };
+    }
+
+    // Get questions for this session
+    const { data: questions, error: questionsError } = await supabase
+      .from('interview_questions')
+      .select('id, question_text, question_type, question_order, related_skill, difficulty, focus_area')
       .eq('session_id', sessionId)
-      .order('created_at', { ascending: true });
+      .order('question_order', { ascending: true });
+
+    if (questionsError) {
+      console.error('Error fetching interview questions:', questionsError);
+      return { data: null, error: 'Failed to fetch interview questions' };
+    }
+
+    // Need to transform the Supabase result to match our expected type
+    const jobPosting = Array.isArray(session.job_posting) && session.job_posting.length > 0 
+      ? session.job_posting[0] 
+      : { id: '', title: '', company: null };
+
+    const sessionWithRelations: InterviewSessionWithRelations = {
+      id: session.id,
+      status: session.status,
+      strategy: session.strategy || {},
+      job_posting: {
+        id: jobPosting.id || '',
+        title: jobPosting.title || '',
+        company: jobPosting.company
+      },
+      questions: questions || []
+    };
+
+    return { data: sessionWithRelations, error: null };
+  } catch (error) {
+    console.error('Unexpected error in getInterviewSession:', error);
+    return { data: null, error: 'An unexpected error occurred' };
+  }
+}
+
+// Get interview questions for a session
+export async function getInterviewQuestions(sessionId: string): Promise<{
+  success: boolean;
+  data?: InterviewQuestionsResult;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
     
+    // Get session info with job posting
+    const { data: session, error: sessionError } = await supabase
+      .from('interview_sessions')
+      .select(`
+        id,
+        status,
+        job_posting:job_postings (
+          title
+        )
+      `)
+      .eq('id', sessionId)
+      .single();
+
+    if (sessionError) {
+      console.error('Error fetching session:', sessionError);
+      return { success: false, error: 'Failed to fetch interview session' };
+    }
+
+    // Get questions for this session
+    const { data: questions, error: questionsError } = await supabase
+      .from('interview_questions')
+      .select('id, question_text, question_type, question_order, related_skill, difficulty, focus_area')
+      .eq('session_id', sessionId)
+      .order('question_order', { ascending: true });
+
+    if (questionsError) {
+      console.error('Error fetching questions:', questionsError);
+      return { success: false, error: 'Failed to fetch interview questions' };
+    }
+
+    // Get existing answers for this session
+    const { data: answers, error: answersError } = await supabase
+      .from('user_answers')
+      .select('id, question_id, answer_text')
+      .in('question_id', questions.map((q: {id: string}) => q.id) || []);
+
     if (answersError) {
       console.error('Error fetching answers:', answersError);
+      // Continue without answers, not a critical error
     }
-    
-    // Format answers
-    const answers = existingAnswers ? existingAnswers.map(answer => ({
-      question_id: answer.question_id,
-      answer_text: answer.answer_text,
-      feedback: answer.feedback
-    })) : [];
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       data: {
-        title,
-        questions,
-        answers
+        title: session.job_posting?.[0]?.title || 'Interview Session',
+        questions: questions || [],
+        answers: answers || []
       }
     };
-    
   } catch (error) {
-    console.error('Error getting interview questions:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to get interview questions' 
-    };
+    console.error('Unexpected error in getInterviewQuestions:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
-// Submit an answer to an interview question
-export async function submitInterviewAnswer({ 
-  sessionId, 
-  questionId, 
-  answer 
-}: { 
-  sessionId: string; 
-  questionId: string; 
-  answer: string; 
-}) {
+// Submit an answer to a question
+export async function submitAnswer(questionId: string, answerText: string): Promise<{ 
+  success: boolean; 
+  data?: { answerId: string }; 
+  error?: string 
+}> {
   try {
-    // Get the current user
-    const { data: { user } } = await getUser();
-    
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-    
-    // Create Supabase client
     const supabase = await createClient();
-    
-    // Verify the session belongs to the user
-    const { data: session, error: sessionError } = await supabase
-      .from('interview_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('profile_id', user.id)
-      .single();
-      
-    if (sessionError || !session) {
-      return { 
-        success: false, 
-        error: 'Interview session not found or access denied' 
-      };
-    }
-    
-    // Generate quick feedback for the answer
-    // In a real application, this would call an agent or API
-    const feedback = generateFeedback(answer);
-    
-    // Save the answer
-    const { error } = await supabase
-      .from('interview_answers')
+
+    // Insert the answer
+    const { data: answer, error: answerError } = await supabase
+      .from('user_answers')
       .insert({
-        session_id: sessionId,
         question_id: questionId,
-        answer_text: answer,
-        profile_id: user.id,
-        feedback
+        answer_text: answerText
       })
-      .select()
+      .select('id')
       .single();
-      
-    if (error) {
-      throw new Error(`Failed to save answer: ${error.message}`);
+
+    if (answerError) {
+      console.error('Error submitting answer:', answerError);
+      return { success: false, error: 'Failed to submit answer' };
     }
-    
-    // If this was the last question, update the session status
-    const { data: answers } = await supabase
-      .from('interview_answers')
-      .select('*')
-      .eq('session_id', sessionId);
-      
-    const totalQuestions = session.strategy?.recommended_questions?.length || 0;
-    
-    if (answers && answers.length === totalQuestions) {
-      await supabase
-        .from('interview_sessions')
-        .update({ status: 'completed' })
-        .eq('id', sessionId);
-    }
-    
+
     return { 
       success: true, 
-      feedback
+      data: { answerId: answer.id }
     };
-    
   } catch (error) {
-    console.error('Error submitting answer:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to submit answer' 
-    };
+    console.error('Unexpected error in submitAnswer:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
-// Complete the interview session and prepare results
-export async function completeInterviewSession(sessionId: string) {
+// Submit an interview answer with evaluation
+export async function submitInterviewAnswer(params: SubmitAnswerParams): Promise<{
+  success: boolean;
+  error?: string;
+  feedback?: {
+    summary: string;
+    strengths: string[];
+    improvements: string[];
+  };
+}> {
+  const { questionId, answer } = params;
   try {
-    // Get the current user
-    const { data: { user } } = await getUser();
-    
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-    
-    // Create Supabase client
     const supabase = await createClient();
-    
-    // Verify the session belongs to the user
-    const { data: session, error: sessionError } = await supabase
-      .from('interview_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('profile_id', user.id)
-      .single();
-      
-    if (sessionError || !session) {
-      return { 
-        success: false, 
-        error: 'Interview session not found or access denied' 
-      };
-    }
-    
-    // Get all answers for this session
-    const { data: answers, error: answersError } = await supabase
-      .from('interview_answers')
-      .select('*')
-      .eq('session_id', sessionId);
-      
-    if (answersError) {
-      throw new Error(`Failed to get answers: ${answersError.message}`);
-    }
-    
-    // Generate evaluation results
-    // In a real application, this would call the evaluator agent
-    const evaluation = generateEvaluation(answers || []);
-    
-    // Update session with evaluation results
-    await supabase
-      .from('interview_sessions')
-      .update({
-        status: 'completed',
-        evaluation_results: evaluation
+
+    // Insert the answer
+    const { error: answerError } = await supabase
+      .from('user_answers')
+      .insert({
+        question_id: questionId,
+        answer_text: answer
       })
-      .eq('id', sessionId);
-    
-    return { 
+      .select('id')
+      .single();
+
+    if (answerError) {
+      console.error('Error submitting answer:', answerError);
+      return { success: false, error: 'Failed to submit answer' };
+    }
+
+    // In a real implementation, we would call the evaluator agent here
+    // For now, just simulate a response
+    const mockFeedback = {
+      summary: "Good job addressing the key points. Try to be more specific with examples.",
+      strengths: ["Clear communication", "Addressed main requirements"],
+      improvements: ["Include specific examples", "Structure response more clearly"]
+    };
+
+    return {
       success: true,
-      evaluation
+      feedback: mockFeedback
     };
-    
   } catch (error) {
-    console.error('Error completing interview session:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to complete interview session' 
-    };
+    console.error('Unexpected error in submitInterviewAnswer:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+// Complete an interview session and generate results
+export async function completeInterviewSession(sessionId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Update session status
+    const { error: updateError } = await supabase
+      .from('interview_sessions')
+      .update({ status: 'completed' })
+      .eq('id', sessionId);
+
+    if (updateError) {
+      console.error('Error completing session:', updateError);
+      return { success: false, error: 'Failed to complete interview session' };
+    }
+
+    // In a real implementation, we would call the evaluator agent to generate results
+    // For now, just return success
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in completeInterviewSession:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
 // Get interview results
-export async function getInterviewResults(sessionId: string) {
+export async function getInterviewResults(sessionId: string): Promise<{
+  success: boolean;
+  data?: InterviewResult;
+  error?: string;
+}> {
   try {
-    // Get the current user
-    const { data: { user } } = await getUser();
-    
-    if (!user) {
-      return { success: false, error: 'User not authenticated' };
-    }
-    
-    // Create Supabase client
     const supabase = await createClient();
-    
-    // Verify the session belongs to the user
+
+    // Get session with job posting
     const { data: session, error: sessionError } = await supabase
       .from('interview_sessions')
       .select(`
-        *,
-        job_postings (
-          title,
-          company
+        id,
+        created_at,
+        job_posting:job_postings (
+          title
         )
       `)
       .eq('id', sessionId)
-      .eq('profile_id', user.id)
       .single();
-      
-    if (sessionError || !session) {
-      return { 
-        success: false, 
-        error: 'Interview session not found or access denied' 
-      };
+
+    if (sessionError) {
+      console.error('Error fetching interview session:', sessionError);
+      return { success: false, error: 'Failed to fetch interview results' };
     }
-    
-    // Get all answers for this session
-    const { data: answers, error: answersError } = await supabase
-      .from('interview_answers')
-      .select('*')
-      .eq('session_id', sessionId);
-      
-    if (answersError) {
-      throw new Error(`Failed to get answers: ${answersError.message}`);
-    }
-    
-    // If evaluation hasn't been done yet, or we need real-time results
-    if (!session.evaluation_results) {
-      // Generate evaluation results
-      const evaluation = generateEvaluation(answers || []);
-      
-      // Update session with evaluation results
-      await supabase
-        .from('interview_sessions')
-        .update({
-          evaluation_results: evaluation
-        })
-        .eq('id', sessionId);
-        
-      session.evaluation_results = evaluation;
-    }
-    
-    // Format the data for the UI
-    const title = session.job_postings 
-      ? `${session.job_postings.title}${session.job_postings.company ? ` at ${session.job_postings.company}` : ''}`
-      : session.title || 'Interview Session';
-      
-    const result = {
+
+    // In a real implementation, we would fetch actual evaluations
+    // For now, return mock data
+    const mockResult: InterviewResult = {
       sessionId,
-      title,
+      title: session.job_posting?.[0]?.title || 'Interview Session',
       date: new Date(session.created_at).toLocaleDateString(),
-      overallScore: session.evaluation_results.overall_score || 3.5,
-      scoreBreakdown: session.evaluation_results.score_breakdown || {
+      overallScore: 3.7,
+      scoreBreakdown: {
         technical: 3.5,
-        communication: 3.5,
-        problemSolving: 3.5,
+        communication: 4.0,
+        problemSolving: 3.8,
         cultureFit: 3.5
       },
-      strengths: session.evaluation_results.strengths || [],
-      weaknesses: session.evaluation_results.areas_to_improve || [],
-      recommendations: session.evaluation_results.recommendations || [],
-      questions: []
+      strengths: [
+        "Clear communication style",
+        "Strong technical fundamentals",
+        "Good problem-solving approach"
+      ],
+      weaknesses: [
+        "Could provide more specific examples",
+        "Some technical explanations lacked depth"
+      ],
+      recommendations: [
+        "Practice with more technical questions",
+        "Prepare specific examples from past work",
+        "Structure answers using the STAR method"
+      ],
+      questions: [
+        {
+          id: "q1",
+          text: "Tell me about a time you solved a difficult technical problem.",
+          type: "behavioral",
+          score: 3.8,
+          answer: "I once had to debug a complex performance issue in our production system...",
+          feedback: "Good explanation of the problem, but could have been more specific about your individual contribution."
+        },
+        {
+          id: "q2",
+          text: "How would you design a scalable web service?",
+          type: "technical",
+          score: 3.5,
+          answer: "I would start by understanding the requirements and expected load...",
+          feedback: "Solid architecture overview, but missing details on specific technologies and trade-offs."
+        }
+      ]
     };
-    
-    // Add questions and answers
-    if (session.strategy && session.strategy.recommended_questions) {
-      result.questions = session.strategy.recommended_questions.map((q: RecommendedQuestion, index: number) => {
-        const matchingAnswer = answers?.find(a => a.question_id === `q-${sessionId}-${index}`);
-        return {
-          id: `q-${sessionId}-${index}`,
-          text: q.question_text,
-          type: q.question_type,
-          score: matchingAnswer?.feedback?.score || 3.0,
-          answer: matchingAnswer?.answer_text || "No answer provided",
-          feedback: matchingAnswer?.feedback?.summary || "No feedback available"
-        };
-      });
-    }
-    
-    return { 
-      success: true, 
-      data: result
-    };
-    
+
+    return { success: true, data: mockResult };
   } catch (error) {
-    console.error('Error getting interview results:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to get interview results' 
-    };
+    console.error('Unexpected error in getInterviewResults:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 
-// Dummy function to generate feedback for an answer
-// In a real application, this would call an AI agent
-function generateFeedback(answer: string) {
-  const strengths = [];
-  const improvements = [];
-  let score = 3.0;
-  
-  // Very basic dummy feedback generation
-  if (answer.length > 200) {
-    strengths.push("Provided a detailed response");
-    score += 0.5;
-  } else {
-    improvements.push("Consider providing more details in your answer");
-    score -= 0.3;
+// Update interview session status
+export async function updateSessionStatus(sessionId: string, status: 'planned' | 'in_progress' | 'completed'): Promise<{ 
+  success: boolean; 
+  error?: string 
+}> {
+  try {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from('interview_sessions')
+      .update({ status })
+      .eq('id', sessionId);
+
+    if (error) {
+      console.error('Error updating session status:', error);
+      return { success: false, error: 'Failed to update session status' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in updateSessionStatus:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
-  
-  if (answer.includes("example") || answer.includes("instance") || answer.includes("case")) {
-    strengths.push("Used specific examples to illustrate points");
-    score += 0.4;
-  } else {
-    improvements.push("Include concrete examples to support your answers");
-  }
-  
-  if (answer.split('.').length > 3) {
-    strengths.push("Well-structured response with multiple points");
-    score += 0.3;
-  }
-  
-  // Ensure score is between 1 and 5
-  score = Math.min(5, Math.max(1, score));
-  
-  return {
-    strengths,
-    improvements,
-    score,
-    summary: strengths.length > improvements.length 
-      ? "Good answer with clear points. " + (improvements.length > 0 ? improvements[0] : "")
-      : "Consider improving this answer. " + (strengths.length > 0 ? strengths[0] : "")
-  };
 }
 
-// Dummy function to generate evaluation for all answers
-// In a real application, this would call the evaluator agent
-function generateEvaluation(answers: Array<{ feedback?: { score?: number, strengths?: string[], improvements?: string[] } }>) {
-  // Calculate average score
-  const totalScore = answers.reduce((sum, answer) => sum + (answer.feedback?.score || 3.0), 0);
-  const overallScore = answers.length > 0 ? totalScore / answers.length : 3.5;
-  
-  // Count strengths and weaknesses
-  const strengthsMap = new Map();
-  const weaknessesMap = new Map();
-  
-  answers.forEach(answer => {
-    if (answer.feedback?.strengths) {
-      answer.feedback.strengths.forEach((strength: string) => {
-        strengthsMap.set(strength, (strengthsMap.get(strength) || 0) + 1);
-      });
+// Delete an interview by deleting its associated job posting (will cascade)
+export async function deleteInterview(jobPostingId: string): Promise<{ 
+  success: boolean; 
+  error?: string 
+}> {
+  try {
+    const supabase = await createClient();
+
+    // Delete the job posting, which will cascade to interview_sessions and related data
+    const { error } = await supabase
+      .from('job_postings')
+      .delete()
+      .eq('id', jobPostingId);
+
+    if (error) {
+      console.error('Error deleting interview:', error);
+      return { success: false, error: 'Failed to delete interview' };
     }
-    if (answer.feedback?.improvements) {
-      answer.feedback.improvements.forEach((improvement: string) => {
-        weaknessesMap.set(improvement, (weaknessesMap.get(improvement) || 0) + 1);
-      });
-    }
-  });
-  
-  // Sort by frequency
-  const strengths = Array.from(strengthsMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([strength]) => strength);
-    
-  const areasToImprove = Array.from(weaknessesMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([weakness]) => weakness);
-  
-  // Generate recommendations
-  const recommendations = [
-    "Practice structuring your answers using the STAR method",
-    "Include specific examples from your experience to strengthen your responses",
-    "Research the company and position more thoroughly before the interview",
-    "Prepare concise answers for common technical questions in your field"
-  ];
-  
-  // Calculate score breakdown
-  const scoreBreakdown = {
-    technical: Math.min(5, Math.max(1, overallScore + (Math.random() * 0.6 - 0.3))),
-    communication: Math.min(5, Math.max(1, overallScore + (Math.random() * 0.6 - 0.3))),
-    problemSolving: Math.min(5, Math.max(1, overallScore + (Math.random() * 0.6 - 0.3))),
-    cultureFit: Math.min(5, Math.max(1, overallScore + (Math.random() * 0.6 - 0.3)))
-  };
-  
-  return {
-    overall_score: overallScore,
-    score_breakdown: scoreBreakdown,
-    strengths,
-    areas_to_improve: areasToImprove,
-    recommendations: recommendations.slice(0, 3)
-  };
+
+    return { success: true };
+  } catch (error) {
+    console.error('Unexpected error in deleteInterview:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
 }

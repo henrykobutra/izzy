@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getInterviewQuestions, submitInterviewAnswer } from '@/lib/actions/interview-handler';
+import { 
+  getInterviewQuestions, 
+  submitInterviewAnswer
+} from '@/lib/actions/interview-handler';
 import { Loader2, Send, MessageSquare, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';

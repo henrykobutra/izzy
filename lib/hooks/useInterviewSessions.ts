@@ -10,6 +10,7 @@ export interface InterviewSession {
   date: Date;
   status: InterviewStatus;
   score?: number;
+  jobPostingId?: string;
   strategy?: {
     job_analysis?: {
       title?: string;
@@ -79,6 +80,7 @@ export function useInterviewSessions() {
           .select(`
             *,
             job_postings (
+              id,
               title,
               company
             )
@@ -108,6 +110,7 @@ export function useInterviewSessions() {
               date: new Date(session.created_at),
               status: (session.status as InterviewStatus) || 'planned',
               score: session.strategy?.overall_score || undefined,
+              jobPostingId: session.job_postings?.id || session.job_posting_id,
               strategy: session.strategy
             };
           });

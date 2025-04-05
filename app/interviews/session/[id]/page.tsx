@@ -28,9 +28,9 @@ import {
 interface InterviewQuestion {
   id: string;
   question_text: string;
-  question_type: 'technical' | 'behavioral' | 'situational';
+  question_type: string; // More flexible to match what comes from the API
   related_skill: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: string;
   focus_area: string;
 }
 
@@ -39,9 +39,10 @@ interface InterviewAnswer {
   question_id: string;
   answer_text: string;
   feedback?: {
+    summary?: string;
     strengths: string[];
     improvements: string[];
-    score: number;
+    score?: number;
   };
 }
 

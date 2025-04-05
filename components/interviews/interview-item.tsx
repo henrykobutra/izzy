@@ -1,16 +1,30 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { 
   ExternalLink,
-  BarChart
+  BarChart,
+  Trash2
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { InterviewSession } from '@/lib/hooks/useInterviewSessions';
+import { deleteInterviewClient } from '@/lib/actions/interview-client';
 
 // Helper function to format the date
 function formatInterviewDate(date: Date): string {
@@ -48,9 +62,39 @@ function getStatusBadge(status: string) {
 
 interface InterviewItemProps {
   session: InterviewSession;
+  onDelete?: () => void;
 }
 
-export function InterviewItem({ session }: InterviewItemProps) {
+export function InterviewItem({ session, onDelete }: InterviewItemProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Handle delete interview
+  const handleDelete = async () => {
+    if (!session.jobPostingId) {
+      console.error("Job posting ID not found");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteInterviewClient(session.jobPostingId);
+      if (result.success) {
+        // Call the parent's onDelete callback to refresh the list
+        if (onDelete) {
+          onDelete();
+        }
+      } else {
+        console.error("Failed to delete interview:", result.error);
+        alert("Failed to delete interview. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting interview:", error);
+      alert("An error occurred while deleting the interview.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card key={session.id} className="overflow-hidden bg-gradient-to-r from-background to-background via-muted/5 border">
       <div className="relative">
@@ -199,6 +243,74 @@ export function InterviewItem({ session }: InterviewItemProps) {
                     `${session.strategy.recommended_questions.length} questions` : 
                     'Questions prepared'}
                 </div>
+                <div className="flex gap-2">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Delete</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Interview Session</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this interview session? This action cannot be undone
+                          and will permanently remove all related data, including questions, answers, and evaluations.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDelete}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? "Deleting..." : "Delete Interview"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  
+                  <Button size="sm" className="gap-1.5" asChild>
+                    <Link href={`/interviews/strategy/${session.id}`}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>View Strategy</span>
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <p>Strategy details will be available once the interview is prepared.</p>
+              <div className="flex justify-center gap-2 mt-4">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Interview Session</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this interview session? This action cannot be undone
+                        and will permanently remove all related data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? "Deleting..." : "Delete Interview"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                
                 <Button size="sm" className="gap-1.5" asChild>
                   <Link href={`/interviews/strategy/${session.id}`}>
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -206,16 +318,6 @@ export function InterviewItem({ session }: InterviewItemProps) {
                   </Link>
                 </Button>
               </div>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              <p>Strategy details will be available once the interview is prepared.</p>
-              <Button size="sm" className="mt-4 gap-1.5" asChild>
-                <Link href={`/interviews/strategy/${session.id}`}>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>View Strategy</span>
-                </Link>
-              </Button>
             </div>
           )}
         </div>
