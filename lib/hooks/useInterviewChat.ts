@@ -33,6 +33,7 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus | null>(null);
   const [isComplete, setIsComplete] = useState(false);
   const [isFirstInteraction, setIsFirstInteraction] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Use Vercel AI SDK's useChat hook with our custom API
   const {
@@ -219,6 +220,9 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
     if (!sessionId) return;
     
     try {
+      // Set resetting flag
+      setIsResetting(true);
+      
       // Clear existing state
       setMessages([]);
       setThreadId(null);
@@ -314,6 +318,9 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
           content: 'Sorry, there was an error starting your interview. Please try again.'
         }
       ]);
+    } finally {
+      // Clear resetting flag
+      setIsResetting(false);
     }
   }, [sessionId, setMessages]);
 
@@ -349,6 +356,7 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
     currentQuestion,
     interviewStatus,
     isComplete,
+    isResetting,
     
     // Actions
     startNewInterview,

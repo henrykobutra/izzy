@@ -9,7 +9,8 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  User
+  User,
+  RefreshCw
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -45,6 +46,7 @@ export default function InterviewSessionPage() {
     currentQuestion,
     interviewStatus,
     isComplete,
+    isResetting,
     startNewInterview
   } = useInterviewChat({
     sessionId
@@ -275,7 +277,7 @@ export default function InterviewSessionPage() {
                     onChange={handleInputChange}
                     onKeyDown={handleKeyPress}
                     className="min-h-32 w-full"
-                    disabled={isLoading || isComplete}
+                    disabled={isLoading || isComplete || isResetting}
                   />
                   <p className="text-xs text-muted-foreground mt-2">
                     Press Ctrl+Enter to submit your answer
@@ -286,7 +288,7 @@ export default function InterviewSessionPage() {
                 <Button 
                   type="submit"
                   onClick={() => handleSubmit(new SubmitEvent('submit'))}
-                  disabled={!input.trim() || isLoading || isComplete} 
+                  disabled={!input.trim() || isLoading || isComplete || isResetting} 
                   className="gap-2"
                 >
                   {isLoading ? (
@@ -316,6 +318,33 @@ export default function InterviewSessionPage() {
                     View Results
                   </Button>
                 )}
+                
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    if (messages.length > 1 && !isComplete) {
+                      if (confirm('This will reset the current interview. Your previous answers will still be saved in history. Continue?')) {
+                        startNewInterview();
+                      }
+                    } else {
+                      startNewInterview();
+                    }
+                  }}
+                  className="ml-2 gap-2"
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Reset Interview
+                    </>
+                  )}
+                </Button>
               </CardFooter>
             </Card>
 
