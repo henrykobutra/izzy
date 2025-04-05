@@ -29,6 +29,34 @@ export const createClient = async () => {
   );
 };
 
+// Create a Supabase client with service role (bypasses RLS)
+export const createServiceClient = async () => {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+    throw new Error('Service role key is required but not configured');
+  }
+  
+  const cookieStore = await cookies();
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {
+          // In a server action, we can't set cookies directly
+        },
+        remove() {
+          // In a server action, we can't remove cookies directly
+        },
+      },
+    }
+  );
+};
+
 // Get current session
 export async function getSession() {
   const supabase = await createClient();

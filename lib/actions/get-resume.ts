@@ -78,3 +78,45 @@ export async function getResumeForCurrentUser(): Promise<GetResumeResult> {
     };
   }
 }
+
+export async function getResume(resumeId: string) {
+  try {
+    // Get the current user
+    const { data: { user } } = await getUser();
+    
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Create Supabase client
+    const supabase = await createClient();
+    
+    // Fetch the resume
+    const { data: resume, error } = await supabase
+      .from('resumes')
+      .select('*')
+      .eq('id', resumeId)
+      .eq('profile_id', user.id)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching resume:', error);
+      return { 
+        success: false, 
+        error: `Resume not found: ${error.message}` 
+      };
+    }
+    
+    return {
+      success: true,
+      data: resume
+    };
+    
+  } catch (error) {
+    console.error('Error fetching resume:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fetch resume' 
+    };
+  }
+}

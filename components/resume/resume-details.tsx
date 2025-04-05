@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteCurrentResume } from '@/lib/actions/resume-parser';
+import { deleteCurrentResume } from '@/agents/parser/agent';
 
 interface ResumeDetailsProps {
   fileName: string;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { UploadState } from '@/components/resume/types';
 import { ResumeParserResponse } from '@/types/openai';
-import { parseResume, saveResumeToSupabase } from '@/lib/actions/resume-parser';
+import { parseResume, saveResumeToSupabase } from '@/agents/parser/agent';
 
 export function useResumeUpload() {
   const [resumeUploaded, setResumeUploaded] = useState(false);

@@ -11,8 +11,12 @@ import {
   PlayCircle,
   CheckCircle,
   Clock,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
+import InterviewInterface from '@/components/interviews/interview-interface';
+import { ResumeSummary } from '@/components/interviews/resume-summary';
+import { getActiveResume } from '@/lib/actions/get-active-resume';
 
 import { useAuth } from '@/lib/hooks/useAuth';
 import { NavBar } from '@/components/ui/nav-bar';
@@ -42,6 +46,19 @@ export default function InterviewsPage() {
   const router = useRouter();
   
   const [resumeUploaded, setResumeUploaded] = useState(false);
+  const [resumeData, setResumeData] = useState<{
+    id: string;
+    technical_skills_count: number;
+    soft_skills_count: number;
+    total_years_experience: number;
+    education: {
+      degree: string;
+      institution: string;
+      year?: number;
+    } | null;
+    full_resume: Record<string, unknown>;
+  } | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [jobDescriptionEntered, setJobDescriptionEntered] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
   const [currentStep, setCurrentStep] = useState<InterviewStep>('setup');
@@ -64,14 +81,29 @@ export default function InterviewsPage() {
       router.push('/sign-in');
     }
 
-    // Check for resume upload status (would be from API in real implementation)
-    const checkResumeStatus = async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setResumeUploaded(true);
+    // Fetch the user's active resume
+    const fetchResumeData = async () => {
+      try {
+        const result = await getActiveResume();
+        if (result.success) {
+          if (result.data) {
+            setResumeData(result.data);
+            setResumeUploaded(true);
+            setResumeError(null);
+          }
+        } else {
+          setResumeUploaded(false);
+          setResumeError(result.error || 'No resume found');
+          console.log("Resume not found:", result.error);
+        }
+      } catch (error) {
+        setResumeUploaded(false);
+        setResumeError('Error fetching resume data');
+        console.error("Error checking resume status:", error);
+      }
     };
 
-    checkResumeStatus();
+    fetchResumeData();
 
     // Load mock interview sessions (would be from API in real implementation)
     const loadInterviewSessions = async () => {
@@ -84,7 +116,7 @@ export default function InterviewsPage() {
           id: '1',
           title: 'Frontend Developer Interview',
           date: new Date(Date.now() - 86400000 * 3), // 3 days ago
-          status: 'completed',
+          status: 'completed' as InterviewStatus,
           score: 4.2
         }
       ]);
@@ -99,34 +131,68 @@ export default function InterviewsPage() {
     
     setIsProcessing(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setJobDescriptionEntered(true);
-    setIsProcessing(false);
-    setCurrentStep('strategy');
+    try {
+      // Call the server action to process the job description
+      const { processJobDescription } = await import('@/agents/process-job-description');
+      const result = await processJobDescription(jobDescription);
+      
+      if (result.success) {
+        console.log('Strategy created:', result.data);
+        setJobDescriptionEntered(true);
+        setCurrentStep('strategy');
+        
+        // Add new planned interview to sessions
+        setInterviewSessions(prev => [
+          {
+            id: result.data?.sessionId || '',
+            title: result.data?.strategy.job_analysis.title || 'Interview Session',
+            date: new Date(),
+            status: 'planned' as InterviewStatus
+          },
+          ...prev
+        ]);
+      } else {
+        console.error('Failed to process job description:', result.error);
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting job description:', error);
+      alert('Failed to process job description. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Start a new interview session
   const startInterview = async () => {
+    // If we don't have an active session ID, we can't start the interview
+    if (!interviewSessions || interviewSessions.length === 0) {
+      console.error('No active interview session found');
+      return;
+    }
+    
     setIsProcessing(true);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setCurrentStep('interview');
-    setIsProcessing(false);
-    
-    // Add new in-progress interview
-    setInterviewSessions(prev => [
-      {
-        id: Math.random().toString(36).substring(2, 11),
-        title: 'Frontend Developer Interview',
-        date: new Date(),
-        status: 'in_progress'
-      },
-      ...prev
-    ]);
+    try {
+      // We're using the most recent session (the one at index 0)
+      
+      // Update the session status locally
+      setInterviewSessions(prev => [
+        {
+          ...prev[0],
+          status: 'in_progress' as InterviewStatus
+        },
+        ...prev.slice(1)
+      ]);
+      
+      // Move to the interview step
+      setCurrentStep('interview');
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      alert('Failed to start the interview. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Complete the interview and show evaluation
@@ -143,7 +209,7 @@ export default function InterviewsPage() {
     setInterviewSessions(prev => [
       {
         ...prev[0],
-        status: 'completed',
+        status: 'completed' as InterviewStatus,
         score: 3.8
       },
       ...prev.slice(1)
@@ -184,32 +250,26 @@ export default function InterviewsPage() {
                 {!resumeUploaded ? (
                   <div className="p-4 border-2 border-dashed rounded-lg flex flex-col items-center gap-4">
                     <div className="flex items-center justify-center h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30">
-                      <FileText className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                      {resumeError ? (
+                        <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                      ) : (
+                        <FileText className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                      )}
                     </div>
                     <div className="text-center space-y-2">
                       <h3 className="text-lg font-medium">Resume Required</h3>
                       <p className="text-muted-foreground max-w-sm">
-                        Please upload your resume before setting up an interview
+                        {resumeError || 'Please upload your resume before setting up an interview'}
                       </p>
                     </div>
                     <Button onClick={() => router.push('/resume')} variant="outline" className="mt-2 gap-2">
                       <FileText className="h-4 w-4" />
-                      Upload Resume
+                      {resumeError ? 'Go to Resume Page' : 'Upload Resume'}
                     </Button>
                   </div>
                 ) : !jobDescriptionEntered ? (
                   <div className="space-y-4">
-                    <div className="p-4 border rounded-lg bg-muted/30 flex items-start gap-3">
-                      <div className="mt-1">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Resume processed</p>
-                        <p className="text-xs text-muted-foreground">
-                          8 skills identified and 3 years of experience detected
-                        </p>
-                      </div>
-                    </div>
+                    {resumeData && <ResumeSummary resumeData={resumeData} />}
                     
                     <div className="space-y-3">
                       <Label htmlFor="job-description">Job Description</Label>
@@ -228,17 +288,7 @@ export default function InterviewsPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="p-4 border rounded-lg bg-muted/30 flex items-start gap-3">
-                      <div className="mt-1">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Resume processed</p>
-                        <p className="text-xs text-muted-foreground">
-                          8 skills identified and 3 years of experience detected
-                        </p>
-                      </div>
-                    </div>
+                    {resumeData && <ResumeSummary resumeData={resumeData} />}
                     
                     <div className="p-4 border rounded-lg bg-muted/30 flex items-start gap-3">
                       <div className="mt-1">
@@ -247,7 +297,9 @@ export default function InterviewsPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Job description processed</p>
                         <p className="text-xs text-muted-foreground">
-                          Frontend Developer role with React, TypeScript, and UI/UX requirements
+                          {jobDescription.length > 100 
+                            ? `${jobDescription.substring(0, 100)}...`
+                            : jobDescription}
                         </p>
                       </div>
                     </div>
@@ -517,59 +569,28 @@ export default function InterviewsPage() {
                   Answer questions from the interviewer as if in a real interview
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="p-4 bg-muted/30 rounded-lg text-center">
-                  <p className="text-sm font-medium">Interview in progress</p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    This is where the actual interview Q&A would take place
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30">
-                        <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      </div>
-                    </div>
-                    <div className="flex-1 p-3 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-medium">Tell me about your experience with React component architecture.</p>
+              <CardContent className="min-h-[500px]">
+                {interviewSessions && interviewSessions.length > 0 ? (
+                  <div className="h-[500px]">
+                    <InterviewInterface 
+                      sessionId={interviewSessions[0].id}
+                      onComplete={completeInterview}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">No active interview session found</p>
+                      <Button
+                        onClick={() => setCurrentStep('setup')}
+                        variant="outline"
+                        className="mt-4"
+                      >
+                        Go Back to Setup
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-start gap-3 flex-row-reverse">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/20">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                    </div>
-                    <div className="flex-1 p-3 bg-primary/5 rounded-lg">
-                      <p className="text-sm">I have 3 years of experience building React applications with a focus on reusable component architecture. I typically structure my components following atomic design principles, creating atoms, molecules, and organisms to build complex interfaces while maintaining consistency and reusability.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30">
-                        <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      </div>
-                    </div>
-                    <div className="flex-1 p-3 bg-muted/30 rounded-lg">
-                      <p className="text-sm font-medium">How do you handle state management in large applications?</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3 flex-row-reverse">
-                    <div className="flex-shrink-0 mt-1">
-                      <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary/20">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                    </div>
-                    <div className="flex-1 p-3 bg-primary/5 rounded-lg">
-                      <p className="text-sm">For state management in larger applications, I take a layered approach. For local component state, I use React&apos;s useState and useReducer hooks. For shared state across related components, I use Context API. For complex global state, I&apos;ve worked with Redux and more recently with libraries like Zustand and Jotai for a more lightweight approach.</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </CardContent>
               <CardFooter>
                 <Button onClick={completeInterview} disabled={isProcessing} className="gap-2">
@@ -803,23 +824,3 @@ export default function InterviewsPage() {
   );
 }
 
-// User icon component
-function User(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
