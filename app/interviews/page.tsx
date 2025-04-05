@@ -115,6 +115,7 @@ export default function InterviewsPage() {
             handleJobDescriptionSubmit={handleJobSubmit}
             startInterview={startInterviewSession}
             setJobDescription={setJobDescription}
+            interviewSessions={interviewSessions.slice(0, 3)}
           />
         );
       
