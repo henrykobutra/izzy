@@ -32,8 +32,8 @@ export type InterviewQuestionsResult = {
     question_type: string;
     question_order: number;
     related_skill: string;
-    difficulty: string;
-    focus_area: string;
+    difficulty: string | null;
+    focus_area: string | null;
   }[];
   answers?: {
     question_id: string;

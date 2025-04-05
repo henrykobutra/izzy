@@ -29,9 +29,9 @@ interface InterviewQuestion {
   id: string;
   question_text: string;
   question_type: string; // More flexible to match what comes from the API
-  related_skill: string;
-  difficulty: string;
-  focus_area: string;
+  related_skill: string | null;
+  difficulty: string | null;
+  focus_area: string | null;
 }
 
 // Interface for interview answers
@@ -292,14 +292,16 @@ export default function InterviewSessionPage() {
                     Interviewer
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <div className={`px-3 py-1 text-xs rounded-full ${currentQuestion.difficulty === 'easy' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                      : currentQuestion.difficulty === 'medium'
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      {currentQuestion.difficulty.charAt(0).toUpperCase() + currentQuestion.difficulty.slice(1)}
-                    </div>
+                    {currentQuestion.difficulty && (
+                      <div className={`px-3 py-1 text-xs rounded-full ${currentQuestion.difficulty === 'easy' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : currentQuestion.difficulty === 'medium'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      }`}>
+                        {currentQuestion.difficulty.charAt(0).toUpperCase() + currentQuestion.difficulty.slice(1)}
+                      </div>
+                    )}
                     <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full">
                       {currentQuestion.question_type.charAt(0).toUpperCase() + currentQuestion.question_type.slice(1)}
                     </div>
@@ -310,12 +312,16 @@ export default function InterviewSessionPage() {
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-lg">{currentQuestion.question_text}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded-md">
-                      Focus: {currentQuestion.focus_area}
-                    </span>
-                    <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded-md">
-                      Skill: {currentQuestion.related_skill}
-                    </span>
+                    {currentQuestion.focus_area && (
+                      <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded-md">
+                        Focus: {currentQuestion.focus_area}
+                      </span>
+                    )}
+                    {currentQuestion.related_skill && (
+                      <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded-md">
+                        Skill: {currentQuestion.related_skill}
+                      </span>
+                    )}
                   </div>
                 </div>
 
