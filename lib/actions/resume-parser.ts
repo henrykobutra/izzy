@@ -2,6 +2,8 @@
 
 import OpenAI from 'openai';
 import { ResumeParserResponse } from '@/types/openai';
+import { createClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/supabase/server';
 
 // Initialize OpenAI client server-side with API key from environment
 const openai = new OpenAI({
@@ -149,6 +151,108 @@ export async function parseResume(pdfText: string) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to process resume' 
+    };
+  }
+}
+
+export async function saveResumeToSupabase(resumeText: string, parsedData: ResumeParserResponse) {
+  try {
+    // Get the current user
+    const { data: { user } } = await getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Create Supabase client
+    const supabase = await createClient();
+    
+    // First, set all existing resumes as inactive
+    await supabase
+      .from('resumes')
+      .update({ is_active: false })
+      .eq('profile_id', user.id)
+      .eq('is_active', true);
+    
+    // Insert the resume data
+    const { data, error } = await supabase
+      .from('resumes')
+      .insert({
+        profile_id: user.id,
+        title: 'My Resume', // Default title
+        content: resumeText,
+        parsed_skills: parsedData.parsed_skills,
+        experience: parsedData.experience,
+        education: parsedData.education,
+        projects: parsedData.projects,
+        is_active: true
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error saving resume to Supabase:', error);
+      throw new Error(`Failed to save resume: ${error.message}`);
+    }
+    
+    // Log the agent activity
+    await supabase
+      .from('agent_logs')
+      .insert({
+        agent_type: 'parser',
+        input: { resume_text_length: resumeText.length },
+        output: { success: true, resume_id: data.id },
+        processing_time: 0 // We don't track this currently
+      });
+    
+    return { success: true, data };
+    
+  } catch (error) {
+    console.error('Error saving resume to Supabase:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to save resume to database' 
+    };
+  }
+}
+
+export async function deleteCurrentResume() {
+  try {
+    // Get the current user
+    const { data: { user } } = await getUser();
+    
+    if (!user) {
+      return { 
+        success: false, 
+        error: 'User not authenticated' 
+      };
+    }
+    
+    // Create Supabase client
+    const supabase = await createClient();
+    
+    // Delete active resumes for this user
+    const { error } = await supabase
+      .from('resumes')
+      .delete()
+      .eq('profile_id', user.id)
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error('Error deleting resume from Supabase:', error);
+      return { 
+        success: false, 
+        error: `Failed to delete resume: ${error.message}` 
+      };
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('Error deleting resume:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to delete resume' 
     };
   }
 }
