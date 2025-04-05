@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { getUser } from '@/lib/supabase/server';
 
+// Get resume for current user (used by client components)
 export async function getActiveResume() {
   try {
     // Get the current user
@@ -59,16 +60,20 @@ export async function getActiveResume() {
       success: true,
       data: {
         id: resume.id,
+        content: resume.content,
+        parsed_skills: resume.parsed_skills,
+        experience: resume.experience,
+        education: resume.education,
+        projects: resume.projects,
         technical_skills_count: technicalSkillsCount,
         soft_skills_count: softSkillsCount,
         total_years_experience: totalYearsExperience,
-        education: education ? {
+        education_summary: education ? {
           degree: education.degree,
           institution: education.institution,
           year: education.year
         } : null,
-        created_at: resume.created_at,
-        full_resume: resume
+        created_at: resume.created_at
       }
     };
     
@@ -77,6 +82,57 @@ export async function getActiveResume() {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to fetch resume information' 
+    };
+  }
+}
+
+// Get resume by profile ID (used by server components and agents)
+export async function getActiveResumeByProfileId(profileId: string) {
+  if (!profileId) {
+    return { data: null, error: 'Profile ID is required' };
+  }
+
+  try {
+    const supabase = await createClient();
+    
+    // Query for the active resume for this profile
+    const { data, error } = await supabase
+      .from('resumes')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching active resume:', error);
+      
+      // If no active resume found, get the most recent one
+      const { data: latestResume, error: latestError } = await supabase
+        .from('resumes')
+        .select('*')
+        .eq('profile_id', profileId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (latestError) {
+        return { 
+          data: null, 
+          error: `No resume found for profile: ${latestError.message}` 
+        };
+      }
+      
+      return { data: latestResume, error: null };
+    }
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error in getActiveResumeByProfileId:', error);
+    return { 
+      data: null, 
+      error: error instanceof Error ? error.message : 'Unknown error retrieving resume' 
     };
   }
 }

@@ -23,7 +23,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 
-import { ResumeData } from '@/lib/constants/interview-types';
+import { ResumeData } from '@/components/resume/types';
 
 interface SetupStepProps {
   resumeUploaded: boolean;

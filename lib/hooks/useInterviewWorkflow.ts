@@ -17,12 +17,12 @@ export function useInterviewWorkflow() {
     setIsProcessing(true);
     
     try {
-      // Call the server action to process the job description
-      const { processJobDescription } = await import('@/lib/actions/process-job-description');
+      // Call the server action to process the job description using the strategist agent
+      const { processJobDescription } = await import('@/agents/process-job-description');
       const result = await processJobDescription(jobDescription);
       
       if (result.success) {
-        console.log('Strategy created:', result.data);
+        console.log('Job and resume analysis complete:', result.data);
         setJobDescriptionEntered(true);
         setCurrentStep('strategy');
         

@@ -50,12 +50,16 @@ export interface ResumeData {
   technical_skills_count: number;
   soft_skills_count: number;
   total_years_experience: number;
-  education: {
+  education_summary?: {
     degree: string;
     institution: string;
     year?: number;
   } | null;
-  full_resume: {
+  education?: Education[] | null;
+  parsed_skills?: ParsedSkills;
+  experience?: Experience[];
+  projects?: Project[];
+  full_resume?: {
     parsed_skills?: ParsedSkills;
     experience?: Experience[];
     education?: Education[];

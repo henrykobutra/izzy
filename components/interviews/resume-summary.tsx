@@ -69,11 +69,21 @@ export function ResumeSummary({ resumeData }: ResumeSummaryProps) {
                 <h3 className="text-lg font-medium">Technical Skills</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {resumeData.full_resume.parsed_skills?.technical?.map((skill, index) => (
-                  <Badge key={index} variant="outline" className="bg-primary/10">
-                    {skill.skill} {skill.level && `(${skill.level}${skill.years ? `, ${skill.years} yrs` : ''})`}
-                  </Badge>
-                )) || null}
+                {resumeData.full_resume?.parsed_skills?.technical ? (
+                  resumeData.full_resume.parsed_skills.technical.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="bg-primary/10">
+                      {skill.skill} {skill.level && `(${skill.level}${skill.years ? `, ${skill.years} yrs` : ''})`}
+                    </Badge>
+                  ))
+                ) : resumeData.parsed_skills?.technical ? (
+                  resumeData.parsed_skills.technical.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="bg-primary/10">
+                      {skill.skill} {skill.level && `(${skill.level}${skill.years ? `, ${skill.years} yrs` : ''})`}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No technical skills listed</p>
+                )}
               </div>
             </div>
             
@@ -84,11 +94,21 @@ export function ResumeSummary({ resumeData }: ResumeSummaryProps) {
                 <h3 className="text-lg font-medium">Soft Skills</h3>
               </div>
               <div className="flex flex-wrap gap-2">
-                {resumeData.full_resume.parsed_skills?.soft?.map((skill, index) => (
-                  <Badge key={index} variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                    {skill.skill} {skill.context && `(${skill.context})`}
-                  </Badge>
-                )) || null}
+                {resumeData.full_resume?.parsed_skills?.soft ? (
+                  resumeData.full_resume.parsed_skills.soft.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      {skill.skill} {skill.context && `(${skill.context})`}
+                    </Badge>
+                  ))
+                ) : resumeData.parsed_skills?.soft ? (
+                  resumeData.parsed_skills.soft.map((skill, index) => (
+                    <Badge key={index} variant="outline" className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      {skill.skill} {skill.context && `(${skill.context})`}
+                    </Badge>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No soft skills listed</p>
+                )}
               </div>
             </div>
             
@@ -99,54 +119,94 @@ export function ResumeSummary({ resumeData }: ResumeSummaryProps) {
                 <h3 className="text-lg font-medium">Professional Experience</h3>
               </div>
               <div className="space-y-3">
-                {resumeData.full_resume.experience?.map((exp, index) => (
-                  <div key={index} className="p-3 border rounded-lg">
-                    <p className="font-medium">{exp.title} at {exp.company}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {exp.duration?.years} year{exp.duration?.years !== 1 ? 's' : ''} 
-                      {exp.duration?.months && exp.duration?.months > 0 ? `, ${exp.duration.months} month${exp.duration.months !== 1 ? 's' : ''}` : ''}
-                    </p>
-                    {exp.highlights && exp.highlights.length > 0 && (
-                      <ul className="text-sm mt-2 list-disc list-inside space-y-1">
-                        {exp.highlights.map((highlight, i) => (
-                          <li key={i}>{highlight}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )) || null}
+                {resumeData.full_resume?.experience && resumeData.full_resume.experience.length > 0 ? (
+                  resumeData.full_resume.experience.map((exp, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <p className="font-medium">{exp.title} at {exp.company}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {exp.duration?.years} year{exp.duration?.years !== 1 ? 's' : ''} 
+                        {exp.duration?.months && exp.duration?.months > 0 ? `, ${exp.duration.months} month${exp.duration.months !== 1 ? 's' : ''}` : ''}
+                      </p>
+                      {exp.highlights && exp.highlights.length > 0 && (
+                        <ul className="text-sm mt-2 list-disc list-inside space-y-1">
+                          {exp.highlights.map((highlight, i) => (
+                            <li key={i}>{highlight}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))
+                ) : resumeData.experience && resumeData.experience.length > 0 ? (
+                  resumeData.experience.map((exp, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <p className="font-medium">{exp.title} at {exp.company}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {exp.duration?.years} year{exp.duration?.years !== 1 ? 's' : ''} 
+                        {exp.duration?.months && exp.duration?.months > 0 ? `, ${exp.duration.months} month${exp.duration.months !== 1 ? 's' : ''}` : ''}
+                      </p>
+                      {exp.highlights && exp.highlights.length > 0 && (
+                        <ul className="text-sm mt-2 list-disc list-inside space-y-1">
+                          {exp.highlights.map((highlight, i) => (
+                            <li key={i}>{highlight}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No professional experience listed</p>
+                )}
               </div>
             </div>
             
             {/* Education */}
-            {resumeData.full_resume.education && resumeData.full_resume.education.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="h-4 w-4 text-green-600" />
-                  <h3 className="text-lg font-medium">Education</h3>
-                </div>
-                <div className="space-y-3">
-                  {resumeData.full_resume.education?.map((edu, index) => (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="h-4 w-4 text-green-600" />
+                <h3 className="text-lg font-medium">Education</h3>
+              </div>
+              <div className="space-y-3">
+                {resumeData.full_resume?.education && resumeData.full_resume.education.length > 0 ? (
+                  resumeData.full_resume.education.map((edu, index) => (
                     <div key={index} className="p-3 border rounded-lg">
                       <p className="font-medium">{edu.degree}</p>
                       <p className="text-sm text-muted-foreground">
                         {edu.institution} {edu.year && `(${edu.year})`}
                       </p>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : resumeData.education && (Array.isArray(resumeData.education) ? resumeData.education.length > 0 : resumeData.education) ? (
+                  Array.isArray(resumeData.education) ? 
+                    resumeData.education.map((edu, index) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <p className="font-medium">{edu.degree}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {edu.institution} {edu.year && `(${edu.year})`}
+                        </p>
+                      </div>
+                    )) : 
+                    <div className="p-3 border rounded-lg">
+                      <p className="font-medium">{resumeData.education_summary?.degree || 'Degree'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {resumeData.education_summary?.institution || 'Institution'} 
+                        {resumeData.education_summary?.year && ` (${resumeData.education_summary.year})`}
+                      </p>
+                    </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No education listed</p>
+                )}
               </div>
-            )}
+            </div>
             
             {/* Projects (if available) */}
-            {resumeData.full_resume.projects && resumeData.full_resume.projects.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                  <h3 className="text-lg font-medium">Projects</h3>
-                </div>
-                <div className="space-y-3">
-                  {resumeData.full_resume.projects?.map((project, index) => (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-purple-600" />
+                <h3 className="text-lg font-medium">Projects</h3>
+              </div>
+              <div className="space-y-3">
+                {resumeData.full_resume?.projects && resumeData.full_resume.projects.length > 0 ? (
+                  resumeData.full_resume.projects.map((project, index) => (
                     <div key={index} className="p-3 border rounded-lg">
                       <p className="font-medium">{project.name}</p>
                       <p className="text-sm mt-1">{project.description}</p>
@@ -160,10 +220,28 @@ export function ResumeSummary({ resumeData }: ResumeSummaryProps) {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : resumeData.projects && resumeData.projects.length > 0 ? (
+                  resumeData.projects.map((project, index) => (
+                    <div key={index} className="p-3 border rounded-lg">
+                      <p className="font-medium">{project.name}</p>
+                      <p className="text-sm mt-1">{project.description}</p>
+                      {project.technologies && project.technologies.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {project.technologies.map((tech, i) => (
+                            <Badge key={i} variant="outline" className="bg-gray-100 dark:bg-gray-800">
+                              {tech}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No projects listed</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

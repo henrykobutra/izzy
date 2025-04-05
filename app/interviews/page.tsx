@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useInterviewSessions } from '@/lib/hooks/useInterviewSessions';
 import { useInterviewWorkflow } from '@/lib/hooks/useInterviewWorkflow';
 import { useResumeCheck } from '@/lib/hooks/useResumeCheck';
+import { ResumeData as ComponentResumeData } from '@/components/resume/types';
 
 export default function InterviewsPage() {
   const { user, loading } = useAuth();
@@ -57,14 +58,23 @@ export default function InterviewsPage() {
     const result = await handleJobDescriptionSubmit();
     if (result?.success) {
       // Add new planned interview to sessions
-      addNewSession({
-        id: result.sessionId || `session-${Date.now()}`,
-        title: result.strategy && typeof result.strategy === 'object' && 'job_analysis' in result.strategy 
-          ? (result.strategy.job_analysis as { title?: string })?.title || 'Interview Session'
-          : 'Interview Session',
-        status: 'planned',
-        date: new Date()
-      });
+      // The session is already created in the database by the strategist agent
+      // We're just adding it to the local state here
+      const sessionId = result.sessionId || `session-${Date.now()}`;
+      
+      // Check if we already have this session in the local state
+      const sessionExists = interviewSessions.some(session => session.id === sessionId);
+      
+      if (!sessionExists) {
+        addNewSession({
+          id: sessionId,
+          title: result.strategy && typeof result.strategy === 'object' && 'job_analysis' in result.strategy 
+            ? (result.strategy.job_analysis as { title?: string })?.title || 'Interview Session'
+            : 'Interview Session',
+          status: 'planned',
+          date: new Date()
+        });
+      }
     }
   };
 
@@ -98,7 +108,7 @@ export default function InterviewsPage() {
           <SetupStep
             resumeUploaded={resumeUploaded}
             resumeError={resumeError}
-            resumeData={resumeData}
+            resumeData={resumeData as ComponentResumeData | null}
             jobDescriptionEntered={jobDescriptionEntered}
             jobDescription={jobDescription}
             isProcessing={isProcessing}
@@ -113,6 +123,7 @@ export default function InterviewsPage() {
           <StrategyStep
             startInterview={startInterviewSession}
             isProcessing={isProcessing}
+            sessionId={interviewSessions.length > 0 ? interviewSessions[0].id : undefined}
           />
         );
       

@@ -3,15 +3,18 @@
 // This file is a placeholder for the future Evaluator agent
 // The evaluator agent will be responsible for analyzing user answers and providing feedback
 
-import { createClient } from '@/lib/supabase/server';
-import { getUser } from '@/lib/supabase/server';
-import OpenAI from 'openai';
+// These imports will be used in the future implementation
+// import { createClient } from '@/lib/supabase/server';
+// import { getUser } from '@/lib/supabase/server';
+// import OpenAI from 'openai';
 
 // Initialize OpenAI client server-side with API key from environment
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// const openai = new OpenAI({
+//   apiKey: process.env.OPENAI_API_KEY,
+// });
 
+// Will be used in future implementation
+/*
 interface EvaluationResponse {
   evaluation: {
     answer_quality: number; // 1-10 scale
@@ -21,6 +24,7 @@ interface EvaluationResponse {
     suggested_response: string;
   };
 }
+*/
 
 export async function evaluateAnswer(sessionId: string, questionId: string, answerText: string) {
   try {

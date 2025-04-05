@@ -15,7 +15,15 @@ export function useResumeCheck() {
         const result = await getActiveResume();
         if (result.success) {
           if (result.data) {
-            setResumeData(result.data);
+            setResumeData({
+              ...result.data,
+              full_resume: result.data.parsed_skills ? {
+                parsed_skills: result.data.parsed_skills,
+                experience: result.data.experience,
+                education: result.data.education,
+                projects: result.data.projects
+              } : {}
+            });
             setResumeUploaded(true);
             setResumeError(null);
           }
