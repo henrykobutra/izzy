@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 
 interface PageHeaderProps {
   interviewSessions: Array<{
@@ -27,12 +23,11 @@ export function PageHeader({ interviewSessions }: PageHeaderProps) {
       </div>
       
       {interviewSessions.length > 0 && (
-        <Tabs defaultValue="current" className="w-full sm:w-auto">
-          <TabsList>
-            <TabsTrigger value="current">Current</TabsTrigger>
-            <TabsTrigger value="past">Past Interviews</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <Button variant="outline" size="sm" asChild>
+          <a href="/history" className="flex items-center gap-2">
+            View History
+          </a>
+        </Button>
       )}
     </div>
   );

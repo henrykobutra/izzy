@@ -136,3 +136,57 @@ export async function getActiveResumeByProfileId(profileId: string) {
     };
   }
 }
+
+// Get active resume ID for the current user (used for creating new sessions)
+export async function getActiveResumeId() {
+  try {
+    // Get the current user
+    const { data: { user } } = await getUser();
+    
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Create Supabase client
+    const supabase = await createClient();
+    
+    // Fetch only the ID of the active resume
+    const { data, error } = await supabase
+      .from('resumes')
+      .select('id')
+      .eq('profile_id', user.id)
+      .eq('is_active', true)
+      .single();
+      
+    if (error) {
+      console.error('Error fetching active resume ID:', error);
+      
+      // Try to get the most recent resume instead
+      const { data: latestResume, error: latestError } = await supabase
+        .from('resumes')
+        .select('id')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (latestError) {
+        return { 
+          success: false, 
+          error: 'No resume found. Please upload your resume first.'
+        };
+      }
+      
+      return { success: true, resumeId: latestResume.id };
+    }
+    
+    return { success: true, resumeId: data.id };
+    
+  } catch (error) {
+    console.error('Error in getActiveResumeId:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get resume information'
+    };
+  }
+}

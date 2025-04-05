@@ -15,7 +15,7 @@ interface InterviewerResponse {
     reaction_type: 'greeting' | 'clarification' | 'acknowledgment' | 'transition_to_next' | 'follow_up' | 'conclusion';
     next_question?: {
       question_text: string;
-      question_type: string;
+      question_type: 'technical' | 'behavioral' | 'situational' | 'general';
       related_skill: string;
       difficulty: string;
       focus_area: string;

@@ -69,7 +69,7 @@ interface StrategistResponse {
   };
   recommended_questions: Array<{
     question_text: string;
-    question_type: 'technical' | 'behavioral' | 'situational';
+    question_type: 'technical' | 'behavioral' | 'situational' | 'general';
     related_skill: string;
     difficulty: 'easy' | 'medium' | 'hard';
     focus_area: string;

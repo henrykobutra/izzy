@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getActiveResume } from '@/lib/actions/get-active-resume';
 
-import { ResumeData } from '@/lib/constants/interview-types';
+import { ResumeData } from '@/components/resume/types';
 
 export function useResumeCheck() {
   const [resumeUploaded, setResumeUploaded] = useState(false);

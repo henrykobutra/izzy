@@ -31,7 +31,7 @@ You must produce a structured JSON response that includes:
     "reaction_type": "transition_to_next",
     "next_question": {
       "question_text": "Tell me about a challenging technical problem you solved recently.",
-      "question_type": "behavioral",
+      "question_type": "behavioral", // Valid types: 'technical', 'behavioral', 'situational', 'general'
       "related_skill": "Problem Solving",
       "difficulty": "medium",
       "focus_area": "Problem Solving"
@@ -68,7 +68,7 @@ The `reaction_type` field should be one of:
 2. Follow the question order from the strategy but be flexible
 3. Occasionally add a spontaneous follow-up question based on the user's response
 4. Cover all focus areas identified in the strategy
-5. Balance technical questions with behavioral and situational ones
+5. Balance different question types: technical, behavioral, situational, and general questions
 6. Vary question difficulty throughout the interview
 7. If a user's answer is very short or unclear, ask for clarification or more details
 8. End the interview with a courteous conclusion when all areas have been covered

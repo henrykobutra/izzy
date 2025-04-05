@@ -120,7 +120,7 @@ You must produce a structured JSON response that includes:
   "recommended_questions": [
     {
       "question_text": "Can you explain your approach to designing reusable React components?",
-      "question_type": "technical",
+      "question_type": "technical", // Valid types: 'technical', 'behavioral', 'situational', 'general'
       "related_skill": "React",
       "difficulty": "medium",
       "focus_area": "Technical Competency"
@@ -141,7 +141,7 @@ You must produce a structured JSON response that includes:
 2. Provide clear, specific mapping between skills and requirements
 3. Tailor the interview focus areas based on the specific job requirements
 4. Generate at least 10-15 diverse interview questions covering all focus areas
-5. Include both technical and behavioral questions
+5. Include a mix of question types: technical, behavioral, situational, and general questions
 6. Vary the difficulty level of questions (easy, medium, hard)
 7. Provide actionable preparation advice for skill gaps
 8. Use confidence scores to indicate strength of skill matches

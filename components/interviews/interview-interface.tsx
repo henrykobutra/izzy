@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { beginInterviewSession, submitAnswer } from '@/lib/actions/interview-handler';
+import { getInterviewQuestions, submitInterviewAnswer } from '@/lib/actions/interview-handler';
 import { Loader2, Send, MessageSquare, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,17 +61,35 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
     const initInterview = async () => {
       setIsLoading(true);
       try {
-        const result = await beginInterviewSession(sessionId);
+        const result = await getInterviewQuestions(sessionId);
         if (result.success && result.data) {
-          setThreadId(result.data.thread_id);
-          setMessages([{
-            role: 'interviewer',
-            content: result.data.message
-          }]);
-          if (result.data.next_question) {
-            setCurrentQuestionId(result.data.next_question.id || null);
+          // Create mock thread ID since we're using the Supabase version instead of OpenAI
+          const mockThreadId = `thread-${sessionId}`;
+          setThreadId(mockThreadId);
+          
+          // Create welcome message if questions exist
+          if (result.data.questions && result.data.questions.length > 0) {
+            const firstQuestion = result.data.questions[0];
+            setMessages([{
+              role: 'interviewer',
+              content: `Welcome to your interview! Let's begin with the first question: ${firstQuestion.question_text}`
+            }]);
+            setCurrentQuestionId(firstQuestion.id || null);
+          } else {
+            setMessages([{
+              role: 'interviewer',
+              content: 'Welcome to your interview! Unfortunately, no questions are available.'
+            }]);
           }
-          setStatus(result.data.status);
+          
+          // Create mock status
+          setStatus({
+            current_question_index: 1,
+            total_questions: result.data.questions?.length || 0,
+            estimated_completion_percentage: result.data.questions?.length > 0 ? (1 / result.data.questions.length) * 100 : 0,
+            areas_covered: ['Introduction'],
+            remaining_areas: ['Technical Skills', 'Experience', 'Problem Solving']
+          });
         } else {
           console.error('Failed to start interview:', result.error);
         }
@@ -101,24 +119,55 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     
     try {
-      const result = await submitAnswer(sessionId, threadId, userMessage, currentQuestionId);
-      if (result.success && result.data) {
-        // Add interviewer response to messages
-        setMessages(prev => [...prev, { role: 'interviewer', content: result.data.message }]);
+      const result = await submitInterviewAnswer({ 
+        sessionId, 
+        questionId: currentQuestionId || '', 
+        answer: userMessage 
+      });
+      if (result.success) {
+        // Add feedback as interviewer response
+        const feedbackMessage = result.feedback?.summary || "Thank you for your answer.";
+        setMessages(prev => [...prev, { role: 'interviewer', content: feedbackMessage }]);
         
-        // Update current question ID for the next round
-        if (result.data.next_question) {
-          setCurrentQuestionId(result.data.next_question.id || null);
+        // Find current question index
+        const currentIndex = status ? status.current_question_index : 0;
+        const totalQuestions = status ? status.total_questions : 0;
+        
+        // Move to next question if there are more
+        if (currentIndex < totalQuestions) {
+          // Get questions from state or fetch them again if needed
+          const nextIndex = currentIndex + 1;
+          const nextQuestion = await getInterviewQuestions(sessionId);
+          
+          if (nextQuestion.success && nextQuestion.data?.questions && nextQuestion.data.questions[nextIndex - 1]) {
+            const questionObj = nextQuestion.data.questions[nextIndex - 1];
+            setCurrentQuestionId(questionObj.id);
+            
+            // Add next question as message
+            setMessages(prev => [...prev, { 
+              role: 'interviewer', 
+              content: `Next question: ${questionObj.question_text}`
+            }]);
+            
+            // Update status
+            setStatus(prev => prev ? {
+              ...prev,
+              current_question_index: nextIndex,
+              estimated_completion_percentage: (nextIndex / totalQuestions) * 100,
+              areas_covered: [...prev.areas_covered, questionObj.focus_area || 'General']
+            } : null);
+          }
         } else {
+          // Interview is complete
           setCurrentQuestionId(null);
-        }
-        
-        // Update interview status
-        setStatus(result.data.status);
-        
-        // Check if interview is complete
-        if (result.data.is_complete) {
           setIsComplete(true);
+          
+          // Add completion message
+          setMessages(prev => [...prev, { 
+            role: 'interviewer', 
+            content: "That completes our interview. Thank you for your time and responses!"
+          }]);
+          
           onComplete();
         }
       } else {
