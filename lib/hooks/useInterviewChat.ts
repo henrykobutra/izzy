@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useChat, type Message } from 'ai/react';
-import { startInterview, continueInterview } from '@/agents/interviewer/agent';
+import { streamInterviewResponse } from '@/lib/actions/interview-stream';
 
 interface InterviewQuestion {
   id: string;
@@ -32,133 +32,192 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
   const [currentQuestion, setCurrentQuestion] = useState<InterviewQuestion | null>(null);
   const [interviewStatus, setInterviewStatus] = useState<InterviewStatus | null>(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFirstInteraction, setIsFirstInteraction] = useState(true);
 
-  // Use Vercel AI SDK's useChat hook for UI state management
+  // Use Vercel AI SDK's useChat hook with our custom API
   const {
     messages,
     input,
     handleInputChange,
     setMessages,
-    isLoading: aiIsLoading,
+    isLoading,
     error
   } = useChat({
     initialMessages,
-    id: sessionId
+    id: sessionId,
+    api: {
+      body: {
+        sessionId,
+        threadId,
+        questionId: currentQuestion?.id
+      }
+    },
+    onFinish: (message) => {
+      // Check for data in the message
+      const data = message.data;
+      if (data) {
+        // Update thread ID if available
+        if (data.threadId) {
+          setThreadId(data.threadId);
+        }
+        
+        // Update current question if available
+        if (data.nextQuestion) {
+          setCurrentQuestion({
+            id: data.nextQuestion.id || '',
+            question_text: data.nextQuestion.question_text,
+            question_type: data.nextQuestion.question_type,
+            related_skill: data.nextQuestion.related_skill,
+            difficulty: data.nextQuestion.difficulty,
+            focus_area: data.nextQuestion.focus_area
+          });
+        }
+        
+        // Update interview status if available
+        if (data.status) {
+          setInterviewStatus(data.status);
+        }
+        
+        // Update completion status
+        if (data.isComplete) {
+          setIsComplete(true);
+        }
+      }
+    }
   });
 
-  // Custom submit handler that integrates with our agent
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
+  // Override the normal append behavior to use our streaming server action
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!sessionId) return;
       
-      if (!input.trim() || isLoading) return;
+      // Optimistically add message to UI
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content,
+      };
       
-      setIsLoading(true);
+      // Add user message to UI
+      setMessages((messages) => [...messages, userMessage]);
       
       try {
-        // Add user message to the UI immediately
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: input,
+        // Add loading message
+        const pendingMessage: Message = {
+          id: Date.now().toString() + '-pending',
+          role: 'assistant',
+          content: '', // Will be filled by streaming
+          isLoading: true,
         };
         
-        // Update messages locally first for immediate feedback
-        setMessages((messages) => [...messages, userMessage]);
+        setMessages((messages) => [...messages, pendingMessage]);
         
-        // Clear input
-        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
+        // Call streaming server action
+        const { stream, metadata } = await streamInterviewResponse({
+          sessionId,
+          threadId: threadId,
+          message: content,
+          questionId: currentQuestion?.id
+        });
         
-        let response;
+        // Create a new message to replace the pending one
+        const responseMessage: Message = {
+          id: Date.now().toString() + '-response',
+          role: 'assistant',
+          content: '',
+        };
         
-        if (!threadId) {
-          // Start a new interview if no threadId exists
-          response = await startInterview(sessionId);
+        // Handle streaming
+        try {
+          const reader = stream.getReader();
+          const decoder = new TextDecoder();
           
-          if (!response.success) {
-            throw new Error(response.error || 'Failed to start interview');
+          // Remove loading message and add the real one
+          setMessages((messages) => messages.filter(m => m.id !== pendingMessage.id).concat(responseMessage));
+          
+          // Read and process stream chunks
+          let done = false;
+          let accumulatedContent = '';
+          
+          while (!done) {
+            const { value, done: doneReading } = await reader.read();
+            done = doneReading;
+            
+            if (value) {
+              accumulatedContent += decoder.decode(value, { stream: true });
+              // Update the message with latest content
+              setMessages((messages) => 
+                messages.map(m => 
+                  m.id === responseMessage.id 
+                    ? { ...m, content: accumulatedContent } 
+                    : m
+                )
+              );
+            }
           }
           
-          setThreadId(response.data.thread_id);
+          // Ensure we decode any remaining stream content
+          const finalContent = decoder.decode();
+          if (finalContent) {
+            accumulatedContent += finalContent;
+            setMessages((messages) => 
+              messages.map(m => 
+                m.id === responseMessage.id 
+                  ? { ...m, content: accumulatedContent } 
+                  : m
+              )
+            );
+          }
+        } catch (streamError) {
+          console.error("Error reading stream:", streamError);
+        }
+        
+        // Process metadata
+        if (metadata) {
+          if (metadata.threadId) {
+            setThreadId(metadata.threadId);
+          }
           
-          if (response.data.next_question) {
+          if (metadata.nextQuestion) {
             setCurrentQuestion({
-              id: response.data.next_question.id || '',
-              question_text: response.data.next_question.question_text,
-              question_type: response.data.next_question.question_type,
-              related_skill: response.data.next_question.related_skill,
-              difficulty: response.data.next_question.difficulty,
-              focus_area: response.data.next_question.focus_area
+              id: metadata.nextQuestion.id || '',
+              question_text: metadata.nextQuestion.question_text,
+              question_type: metadata.nextQuestion.question_type,
+              related_skill: metadata.nextQuestion.related_skill,
+              difficulty: metadata.nextQuestion.difficulty,
+              focus_area: metadata.nextQuestion.focus_area
             });
           }
           
-          if (response.data.status) {
-            setInterviewStatus(response.data.status);
-          }
-        } else {
-          // Continue existing interview
-          response = await continueInterview(
-            sessionId,
-            threadId,
-            input,
-            currentQuestion?.id || null
-          );
-          
-          if (!response.success) {
-            throw new Error(response.error || 'Failed to continue interview');
+          if (metadata.status) {
+            setInterviewStatus(metadata.status);
           }
           
-          if (response.data.next_question) {
-            setCurrentQuestion({
-              id: response.data.next_question.id || '',
-              question_text: response.data.next_question.question_text,
-              question_type: response.data.next_question.question_type,
-              related_skill: response.data.next_question.related_skill,
-              difficulty: response.data.next_question.difficulty,
-              focus_area: response.data.next_question.focus_area
-            });
-          } else {
-            setCurrentQuestion(null);
-          }
-          
-          if (response.data.status) {
-            setInterviewStatus(response.data.status);
-          }
-          
-          if (response.data.is_complete) {
+          if (metadata.isComplete) {
             setIsComplete(true);
           }
         }
-        
-        // Add assistant response to messages
-        const assistantMessage: Message = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: response.data.message,
-        };
-        
-        setMessages((messages) => [...messages, assistantMessage]);
-        
       } catch (error) {
-        console.error('Error in interview handling:', error);
+        console.error('Error in streaming interview response:', error);
+        
         // Add error message
-        const errorMessage: Message = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: 'Sorry, there was an error processing your interview. Please try again.',
-        };
-        setMessages((messages) => [...messages, errorMessage]);
-      } finally {
-        setIsLoading(false);
+        setMessages((messages) => [
+          ...messages,
+          {
+            id: Date.now().toString() + '-error',
+            role: 'assistant',
+            content: 'Sorry, there was an error processing your request. Please try again.'
+          }
+        ]);
       }
     },
-    [input, sessionId, threadId, currentQuestion, setMessages, handleInputChange, isLoading]
+    [sessionId, threadId, currentQuestion, setMessages]
   );
 
-  // Helper to start a new interview
+  // Start a new interview with streaming
   const startNewInterview = useCallback(async () => {
-    setIsLoading(true);
+    if (!sessionId) return;
+    
     try {
       // Clear existing state
       setMessages([]);
@@ -167,52 +226,114 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
       setInterviewStatus(null);
       setIsComplete(false);
       
-      // Start new interview
-      const response = await startInterview(sessionId);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to start interview');
-      }
-      
-      setThreadId(response.data.thread_id);
-      
-      if (response.data.next_question) {
-        setCurrentQuestion({
-          id: response.data.next_question.id || '',
-          question_text: response.data.next_question.question_text,
-          question_type: response.data.next_question.question_type,
-          related_skill: response.data.next_question.related_skill,
-          difficulty: response.data.next_question.difficulty,
-          focus_area: response.data.next_question.focus_area
-        });
-      }
-      
-      if (response.data.status) {
-        setInterviewStatus(response.data.status);
-      }
-      
-      // Add greeting message
-      const assistantMessage: Message = {
-        id: Date.now().toString(),
+      // Add loading message
+      const pendingMessage: Message = {
+        id: Date.now().toString() + '-pending',
         role: 'assistant',
-        content: response.data.message,
+        content: '', // Will be filled by streaming
+        isLoading: true,
       };
       
-      setMessages([assistantMessage]);
+      setMessages([pendingMessage]);
       
+      // Call streaming server action
+      const { stream, metadata } = await streamInterviewResponse({
+        sessionId,
+      });
+      
+      // Create a new message to replace the pending one
+      const responseMessage: Message = {
+        id: Date.now().toString() + '-response',
+        role: 'assistant',
+        content: '',
+      };
+      
+      // Remove pending message and add the real one
+      setMessages([responseMessage]);
+      
+      // Handle streaming
+      try {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        
+        let done = false;
+        let accumulatedContent = '';
+        
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          
+          if (value) {
+            accumulatedContent += decoder.decode(value, { stream: true });
+            // Update the message with latest content
+            setMessages([{ ...responseMessage, content: accumulatedContent }]);
+          }
+        }
+        
+        // Ensure we decode any remaining stream content
+        const finalContent = decoder.decode();
+        if (finalContent) {
+          accumulatedContent += finalContent;
+          setMessages([{ ...responseMessage, content: accumulatedContent }]);
+        }
+      } catch (streamError) {
+        console.error("Error reading stream:", streamError);
+      }
+      
+      // Process metadata
+      if (metadata) {
+        if (metadata.threadId) {
+          setThreadId(metadata.threadId);
+        }
+        
+        if (metadata.nextQuestion) {
+          setCurrentQuestion({
+            id: metadata.nextQuestion.id || '',
+            question_text: metadata.nextQuestion.question_text,
+            question_type: metadata.nextQuestion.question_type,
+            related_skill: metadata.nextQuestion.related_skill,
+            difficulty: metadata.nextQuestion.difficulty,
+            focus_area: metadata.nextQuestion.focus_area
+          });
+        }
+        
+        if (metadata.status) {
+          setInterviewStatus(metadata.status);
+        }
+      }
+      
+      setIsFirstInteraction(false);
     } catch (error) {
       console.error('Error starting interview:', error);
+      
       // Add error message
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: 'Sorry, there was an error starting your interview. Please try again.',
-      };
-      setMessages([errorMessage]);
-    } finally {
-      setIsLoading(false);
+      setMessages([
+        {
+          id: Date.now().toString() + '-error',
+          role: 'assistant',
+          content: 'Sorry, there was an error starting your interview. Please try again.'
+        }
+      ]);
     }
   }, [sessionId, setMessages]);
+
+  // Custom submit handler for the interview chat
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      
+      if (!input.trim() || isLoading) return;
+      
+      if (isFirstInteraction) {
+        await startNewInterview();
+      } else {
+        await sendMessage(input);
+        // Clear input field after sending
+        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
+      }
+    },
+    [input, isLoading, isFirstInteraction, startNewInterview, sendMessage, handleInputChange]
+  );
 
   return {
     // Chat state
@@ -220,7 +341,7 @@ export function useInterviewChat({ sessionId, initialMessages = [] }: InterviewC
     input,
     handleInputChange,
     handleSubmit,
-    isLoading: isLoading || aiIsLoading,
+    isLoading,
     error,
     
     // Interview state
