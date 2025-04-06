@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useChat, type Message } from "ai/react";
 import { streamInterviewResponse } from "@/lib/actions/interview-stream";
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
 
 interface InterviewQuestion {
   id: string;
@@ -40,52 +45,17 @@ export function useInterviewChat({
   const [isFirstInteraction, setIsFirstInteraction] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [input, setInput] = useState("");
 
-  // Use Vercel AI SDK's useChat hook with our custom API
-  const { messages, input, handleInputChange, setMessages, isLoading, error } =
-    useChat({
-      initialMessages,
-      id: sessionId,
-      api: {
-        body: {
-          sessionId,
-          threadId,
-          questionId: currentQuestion?.id,
-        },
-      },
-      onFinish: (message) => {
-        // Check for data in the message
-        const data = message.data;
-        if (data) {
-          // Update thread ID if available
-          if (data.threadId) {
-            setThreadId(data.threadId);
-          }
-
-          // Update current question if available
-          if (data.nextQuestion) {
-            setCurrentQuestion({
-              id: data.nextQuestion.id || "",
-              question_text: data.nextQuestion.question_text,
-              question_type: data.nextQuestion.question_type,
-              related_skill: data.nextQuestion.related_skill,
-              difficulty: data.nextQuestion.difficulty,
-              focus_area: data.nextQuestion.focus_area,
-            });
-          }
-
-          // Update interview status if available
-          if (data.status) {
-            setInterviewStatus(data.status);
-          }
-
-          // Update completion status
-          if (data.isComplete) {
-            setIsComplete(true);
-          }
-        }
-      },
-    });
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setInput(e.target.value);
+    },
+    []
+  );
 
   // Override the normal append behavior to use our streaming server action
   const sendMessage = useCallback(
@@ -94,6 +64,7 @@ export function useInterviewChat({
 
       // Set streaming state
       setIsStreaming(true);
+      setIsLoading(true);
 
       // Optimistically add message to UI
       const userMessage: Message = {
@@ -111,7 +82,6 @@ export function useInterviewChat({
           id: Date.now().toString() + "-pending",
           role: "assistant",
           content: "", // Will be filled by streaming
-          isLoading: true,
         };
 
         setMessages((messages) => [...messages, pendingMessage]);
@@ -178,6 +148,7 @@ export function useInterviewChat({
           }
         } catch (streamError) {
           console.error("Error reading stream:", streamError);
+          setError("Error reading stream response");
         }
 
         // Process metadata
@@ -207,6 +178,7 @@ export function useInterviewChat({
         }
       } catch (error) {
         console.error("Error in streaming interview response:", error);
+        setError("Error processing your request. Please try again.");
 
         // Add error message
         setMessages((messages) => [
@@ -221,9 +193,10 @@ export function useInterviewChat({
       } finally {
         // Clear streaming state
         setIsStreaming(false);
+        setIsLoading(false);
       }
     },
-    [sessionId, threadId, currentQuestion, setMessages]
+    [sessionId, threadId, currentQuestion]
   );
 
   // Start a new interview with streaming
@@ -233,6 +206,7 @@ export function useInterviewChat({
     try {
       // Set resetting flag
       setIsResetting(true);
+      setIsLoading(true);
 
       // Clear existing state
       setMessages([]);
@@ -240,13 +214,13 @@ export function useInterviewChat({
       setCurrentQuestion(null);
       setInterviewStatus(null);
       setIsComplete(false);
+      setError(null);
 
       // Add loading message
       const pendingMessage: Message = {
         id: Date.now().toString() + "-pending",
         role: "assistant",
         content: "", // Will be filled by streaming
-        isLoading: true,
       };
 
       setMessages([pendingMessage]);
@@ -293,6 +267,7 @@ export function useInterviewChat({
         }
       } catch (streamError) {
         console.error("Error reading stream:", streamError);
+        setError("Error reading stream response");
       }
 
       // Process metadata
@@ -320,6 +295,7 @@ export function useInterviewChat({
       setIsFirstInteraction(false);
     } catch (error) {
       console.error("Error starting interview:", error);
+      setError("Error starting interview. Please try again.");
 
       // Add error message
       setMessages([
@@ -333,8 +309,9 @@ export function useInterviewChat({
     } finally {
       // Clear resetting flag
       setIsResetting(false);
+      setIsLoading(false);
     }
-  }, [sessionId, setMessages]);
+  }, [sessionId]);
 
   // Custom submit handler for the interview chat
   const handleSubmit = useCallback(
@@ -348,19 +325,10 @@ export function useInterviewChat({
       } else {
         await sendMessage(input);
         // Clear input field after sending
-        handleInputChange({
-          target: { value: "" },
-        } as React.ChangeEvent<HTMLInputElement>);
+        setInput("");
       }
     },
-    [
-      input,
-      isLoading,
-      isFirstInteraction,
-      startNewInterview,
-      sendMessage,
-      handleInputChange,
-    ]
+    [input, isLoading, isFirstInteraction, startNewInterview, sendMessage]
   );
 
   return {
