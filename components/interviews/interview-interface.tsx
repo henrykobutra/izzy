@@ -166,25 +166,27 @@ export default function InterviewInterface({
         ]);
 
         // If there are specific strengths or improvements, add them as additional messages
-        if (result.feedback.strengths?.length) {
+        if (result.feedback?.strengths?.length) {
           setMessages((prev) => [
             ...prev,
             {
               role: "interviewer",
-              content: `Strengths: ${result.feedback.strengths.join(", ")}`,
+              content: `Strengths: ${
+                result.feedback?.strengths?.join(", ") || ""
+              }`,
               questionId: currentQuestionId || undefined,
             },
           ]);
         }
 
-        if (result.feedback.improvements?.length) {
+        if (result.feedback?.improvements?.length) {
           setMessages((prev) => [
             ...prev,
             {
               role: "interviewer",
-              content: `Areas for improvement: ${result.feedback.improvements.join(
-                ", "
-              )}`,
+              content: `Areas for improvement: ${
+                result.feedback?.improvements?.join(", ") || ""
+              }`,
               questionId: currentQuestionId || undefined,
             },
           ]);

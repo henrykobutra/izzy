@@ -246,6 +246,8 @@ export async function analyzeJobAndResume(jobDescription: string, resumeId: stri
       question_text: q.question_text,
       question_type: q.question_type,
       related_skill: q.related_skill,
+      difficulty: q.difficulty,
+      focus_area: q.focus_area,
       question_order: index + 1,
       source: 'strategist'
     }));

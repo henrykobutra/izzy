@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  ArrowLeft,
   Bot,
   Send,
   Loader2,
@@ -13,6 +12,8 @@ import {
   RefreshCw,
   MessageSquare,
   ChevronDown,
+  Plus,
+  History,
 } from "lucide-react";
 
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -28,6 +29,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -46,8 +58,10 @@ export default function InterviewSessionPage() {
   const [companyName, setCompanyName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isMac, setIsMac] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Use our custom interview chat hook
+  // Use our custom interview chat hook for a fresh session every time
   const {
     messages,
     input,
@@ -58,9 +72,12 @@ export default function InterviewSessionPage() {
     interviewStatus,
     isComplete,
     isResetting,
+    isEndingInterview,
     startNewInterview,
+    endInterview,
   } = useInterviewChat({
     sessionId,
+    forceNewSession: true, // Always force a new session
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -127,7 +144,7 @@ export default function InterviewSessionPage() {
   // Effect to start the interview when the component loads
   useEffect(() => {
     if (sessionId && user && !authLoading && messages.length === 0) {
-      startNewInterview();
+      startNewInterview(); // Start a new interview
     }
   }, [sessionId, user, authLoading, messages.length, startNewInterview]);
 
@@ -149,18 +166,16 @@ export default function InterviewSessionPage() {
     }
   };
 
-  // Handle ending the interview early
-  const endInterview = () => {
-    if (messages.length > 1 && !isComplete) {
-      if (
-        confirm(
-          "Are you sure you want to end this interview? Your progress will be saved and you can view the results."
-        )
-      ) {
-        router.push(`/interviews/results/${sessionId}`);
-      }
-    } else {
-      router.push(`/interviews/results/${sessionId}`);
+  // Handle confirmation from alert dialog
+  const handleEndInterviewConfirm = async () => {
+    // Close both the dialog and dropdown
+    setIsAlertOpen(false);
+    setIsDropdownOpen(false);
+
+    // Always force re-evaluation when user confirms
+    if (messages.length > 1 && !isEndingInterview) {
+      await endInterview();
+      // Don't navigate immediately - let the hook handle the redirect after evaluator is done
     }
   };
 
@@ -216,27 +231,50 @@ export default function InterviewSessionPage() {
           {/* Header with navigation and progress */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1 -ml-2 cursor-pointer"
-                onClick={() => {
-                  if (messages.length > 1 && !isComplete) {
-                    if (
-                      confirm(
-                        "Your progress will be saved, but you will exit the current interview. Continue?"
-                      )
-                    ) {
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2 cursor-pointer shadow-sm hover:shadow transition-all"
+                  onClick={() => {
+                    if (messages.length > 1 && !isComplete) {
+                      if (
+                        confirm(
+                          "Your progress will be saved, but you will exit the current interview. Continue?"
+                        )
+                      ) {
+                        router.push("/interviews");
+                      }
+                    } else {
                       router.push("/interviews");
                     }
-                  } else {
-                    router.push("/interviews");
-                  }
-                }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Back</span>
-              </Button>
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>New Interview</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 cursor-pointer hover:bg-muted/50 transition-all"
+                  onClick={() => {
+                    if (messages.length > 1 && !isComplete) {
+                      if (
+                        confirm(
+                          "Your progress will be saved, but you will exit the current interview. Continue?"
+                        )
+                      ) {
+                        router.push("/history");
+                      }
+                    } else {
+                      router.push("/history");
+                    }
+                  }}
+                >
+                  <History className="h-4 w-4" />
+                  <span>Past Interviews</span>
+                </Button>
+              </div>
               <h1 className="text-3xl font-bold tracking-tight">
                 {sessionTitle}
               </h1>
@@ -408,7 +446,10 @@ export default function InterviewSessionPage() {
               </CardContent>
               <CardFooter className="flex justify-between">
                 {/* Interview actions dropdown */}
-                <DropdownMenu>
+                <DropdownMenu
+                  open={isDropdownOpen}
+                  onOpenChange={setIsDropdownOpen}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
                       Actions
@@ -423,19 +464,57 @@ export default function InterviewSessionPage() {
                       <RefreshCw className="mr-2 h-4 w-4" />
                       {isResetting ? "Resetting..." : "Reset Interview"}
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={endInterview}
-                      disabled={isComplete}
+                    <AlertDialog
+                      open={isAlertOpen}
+                      onOpenChange={setIsAlertOpen}
                     >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      End Interview Early
-                    </DropdownMenuItem>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setIsAlertOpen(true);
+                          }}
+                          disabled={isEndingInterview}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          {isEndingInterview
+                            ? "Ending interview..."
+                            : isComplete
+                            ? "Re-evaluate Interview"
+                            : "End Interview Early"}
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {isComplete
+                              ? "Re-evaluate this interview?"
+                              : "End this interview?"}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {isComplete
+                              ? "This will re-evaluate all of your interview answers and generate new feedback. The previous evaluation will be permanently replaced."
+                              : "This will permanently end the current interview. Only already answered questions will be evaluated. You cannot resume this session later and would need to start a new interview if you wish to continue practicing."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleEndInterviewConfirm}
+                            className="bg-amber-500 hover:bg-amber-600"
+                          >
+                            {isComplete ? "Re-evaluate" : "End Interview"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
                 {/* Submit button and View Results on the right */}
                 <div className="flex">
-                  {isComplete && (
+                  {isComplete && !isEndingInterview && (
                     <Button
                       variant="outline"
                       onClick={() =>
@@ -445,6 +524,17 @@ export default function InterviewSessionPage() {
                       type="button"
                     >
                       View Results
+                    </Button>
+                  )}
+                  {isEndingInterview && (
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="mr-2 cursor-not-allowed"
+                      type="button"
+                    >
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Evaluating...
                     </Button>
                   )}
 

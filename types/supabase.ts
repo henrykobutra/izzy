@@ -125,6 +125,8 @@ export type Database = {
           related_skill: string | null
           session_id: string
           source: string | null
+          difficulty: string | null
+          focus_area: string | null
         }
         Insert: {
           created_at?: string
@@ -135,6 +137,8 @@ export type Database = {
           related_skill?: string | null
           session_id: string
           source?: string | null
+          difficulty?: string | null
+          focus_area?: string | null
         }
         Update: {
           created_at?: string
@@ -145,6 +149,8 @@ export type Database = {
           related_skill?: string | null
           session_id?: string
           source?: string | null
+          difficulty?: string | null
+          focus_area?: string | null
         }
         Relationships: [
           {

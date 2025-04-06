@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronRight } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -15,11 +15,45 @@ import { useRouter } from 'next/navigation';
 
 interface FeedbackSummaryProps {
   commonImprovements: string[];
+  summary?: string;
+  sessionId?: string;
 }
 
-export function FeedbackSummary({ commonImprovements }: FeedbackSummaryProps) {
+export function FeedbackSummary({ commonImprovements, summary, sessionId }: FeedbackSummaryProps) {
   const router = useRouter();
   
+  // If we have a session-specific summary, show that instead of common improvements
+  if (summary && sessionId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Session Feedback</CardTitle>
+          <CardDescription>
+            Overall assessment of your interview performance
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 border rounded-lg">
+              <p className="text-sm">{summary}</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button 
+            variant="outline" 
+            className="w-full gap-2" 
+            onClick={() => router.push(`/interviews/results/${sessionId}`)}
+          >
+            View Full Analysis
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  // Otherwise, show common improvements across interviews
   return (
     <Card>
       <CardHeader>
