@@ -6,11 +6,14 @@ import Link from "next/link";
 import {
   FileText,
   ArrowRight,
-  Loader2,
   AlertTriangle,
   Bot,
   Calendar,
+  BrainCircuit,
+  FileSearch,
+  BarChart,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Components
 import { NavBar } from "@/components/ui/nav-bar";
@@ -19,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { HistoryItem } from "@/components/interviews/history-item";
 import { ResumeSummary } from "@/components/interviews/resume-summary";
+import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 import {
   Card,
   CardContent,
@@ -50,12 +54,89 @@ export default function InterviewsPage() {
   }, [sessionId, user, router]);
 
   // Custom hooks
-  const { resumeUploaded, resumeData, resumeError } = useResumeCheck();
+  const {
+    resumeUploaded,
+    resumeData,
+    resumeError,
+    loading: resumeLoading,
+  } = useResumeCheck();
   const { interviewSessions, setInterviewSessions } = useInterviewSessions();
 
   // Local state
   const [jobDescription, setJobDescription] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Loading states for multi-step loader
+  const processingSteps = [
+    { 
+      text: "Skimming through your resume like a recruiter with coffee...",
+      icon: <FileSearch className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Figuring out what skills you actually have vs what you claim...",
+      icon: <FileSearch className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Checking if your experience is as impressive as it sounds...",
+      icon: <FileSearch className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Decoding corporate speak in the job description...",
+      icon: <FileText className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Translating 'team player' into actual requirements...",
+      icon: <FileText className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Checking if 'competitive salary' means anything...",
+      icon: <FileText className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Matching your skills to job requirements (fingers crossed)...",
+      icon: <BrainCircuit className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Calculating your chance of getting past the ATS...",
+      icon: <BrainCircuit className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Determining if you're actually qualified or just confident...",
+      icon: <BrainCircuit className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Training AI to ask questions just like that awkward interviewer...",
+      icon: <Bot className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Preparing for the inevitable 'tell me about yourself' question...",
+      icon: <Bot className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Crafting questions that will make you think on your feet...",
+      icon: <Bot className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Creating backup questions for when you say 'good question'...",
+      icon: <Bot className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Teaching AI to nod thoughtfully while you answer...",
+      icon: <Bot className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Preparing follow-up questions to keep you on your toes...",
+      icon: <BarChart className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Almost ready! Just need to perfect that poker face...",
+      icon: <BarChart className="h-6 w-6 text-primary" />,
+    },
+    { 
+      text: "Finalizing your personalized interview experience...",
+      icon: <BarChart className="h-6 w-6 text-primary" />,
+    },
+  ];
 
   // Check if user is authenticated
   useEffect(() => {
@@ -118,15 +199,88 @@ export default function InterviewsPage() {
   };
 
   // Display loading state
-  if (authLoading) {
+  if (authLoading || resumeLoading) {
     return (
       <div className="flex min-h-screen flex-col">
         <NavBar activePath="/interviews" />
 
-        <main className="flex-1 flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg font-medium">Loading your profile...</p>
+        <main className="flex-1 container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col gap-8">
+            {/* Page header skeleton */}
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-9 w-64" />
+              <Skeleton className="h-5 w-96" />
+            </div>
+
+            {/* Main setup section skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-4 border-2 border-dashed rounded-lg flex flex-col items-center gap-4">
+                      <Skeleton className="h-16 w-16 rounded-full" />
+                      <div className="text-center space-y-2">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-64" />
+                      </div>
+                      <Skeleton className="h-9 w-36" />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Skeleton className="h-9 w-36" />
+                  </CardFooter>
+                </Card>
+              </div>
+
+              <div>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-6 w-32" />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <div className="space-y-2">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <Skeleton className="h-5 w-5 rounded-full" />
+                          <Skeleton className="h-4 w-48" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Recent sessions skeleton */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-48" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-8 w-24" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           </div>
         </main>
 
@@ -141,6 +295,13 @@ export default function InterviewsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <NavBar activePath="/interviews" />
+
+      {/* Multi-step loader */}
+      <MultiStepLoader
+        loadingStates={processingSteps}
+        loading={isProcessing}
+        duration={3000}
+      />
 
       <main className="flex-1 container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col gap-8">
@@ -237,17 +398,8 @@ export default function InterviewsPage() {
                     disabled={!jobDescription.trim() || isProcessing}
                     className="gap-2"
                   >
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="h-4 w-4" />
-                        Create Interview
-                      </>
-                    )}
+                    <ArrowRight className="h-4 w-4" />
+                    Create Interview
                   </Button>
                 )}
               </CardFooter>
