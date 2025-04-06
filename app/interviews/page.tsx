@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FileText,
@@ -43,15 +43,6 @@ import { deleteInterviewClient } from "@/lib/actions/interview-client";
 export default function InterviewsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session");
-
-  // Redirect to session if ID is provided
-  useEffect(() => {
-    if (sessionId && user) {
-      router.push(`/interviews/session/${sessionId}`);
-    }
-  }, [sessionId, user, router]);
 
   // Custom hooks
   const {

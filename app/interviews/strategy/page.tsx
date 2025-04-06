@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 import { NavBar } from '@/components/ui/nav-bar';
@@ -9,18 +9,11 @@ import { Footer } from '@/components/ui/footer';
 
 export default function StrategyRedirectPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session');
 
   useEffect(() => {
-    if (sessionId) {
-      // Redirect to the new URL pattern
-      router.replace(`/interviews/strategy/${sessionId}`);
-    } else {
-      // If no session ID is provided, redirect to the interviews page
-      router.replace('/interviews');
-    }
-  }, [sessionId, router]);
+    // Always redirect to the interviews page since we don't need search params anymore
+    router.replace('/interviews');
+  }, [router]);
 
   return (
     <div className="flex min-h-screen flex-col">

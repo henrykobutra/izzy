@@ -26,7 +26,7 @@ export function NavBar({ activePath = "/" }: NavBarProps) {
             height={24}
             className="h-6 w-6"
           />
-          <span className="font-bold text-xl">Izzy</span>
+          <span className="font-bold text-xl text-primary">Izzy</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">

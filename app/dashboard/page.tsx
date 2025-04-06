@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -265,12 +264,8 @@ export default function DashboardPage() {
                 <div className="flex justify-center py-8">
                   <div className="flex flex-col items-center gap-6 max-w-md text-center">
                     <div className="flex items-center justify-center h-24 w-24 rounded-full bg-primary/10">
-                      <Image
-                        src="/file.svg"
-                        alt="Upload resume"
-                        width={48}
-                        height={48}
-                        className="opacity-70"
+                      <FileText 
+                        className="h-12 w-12 opacity-70"
                       />
                     </div>
                     <div className="space-y-2">
