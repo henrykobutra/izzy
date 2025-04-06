@@ -11,7 +11,6 @@ import {
   BarChart4,
   CheckCircle,
   ArrowRight,
-  Loader2,
   Calendar,
   Clock,
 } from "lucide-react";

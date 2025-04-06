@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 async function resetSessionAnswers(sessionId: string) {
   try {
-    console.log(`Resetting interview session ${sessionId} before starting a new interview`);
+    // Resetting interview session
     const supabase = await createClient();
     
     // Get all questions for this session
@@ -19,7 +19,7 @@ async function resetSessionAnswers(sessionId: string) {
       .eq("session_id", sessionId);
       
     if (questionsError) {
-      console.error("Error fetching questions for reset:", questionsError);
+      // Error fetching questions for reset
       return; // Continue with the interview even if reset fails
     }
     
@@ -29,7 +29,7 @@ async function resetSessionAnswers(sessionId: string) {
     
     // Delete all user answers for questions in this session
     // This will cascade to delete evaluations as well due to foreign key constraints
-    const { error: deleteAnswersError, count: deletedCount } = await supabase
+    const { error: deleteAnswersError } = await supabase
       .from("user_answers")
       .delete({ count: 'exact' })
       .in(
@@ -38,9 +38,9 @@ async function resetSessionAnswers(sessionId: string) {
       );
       
     if (deleteAnswersError) {
-      console.error("Error deleting answers during reset:", deleteAnswersError);
+      // Error deleting answers during reset
     } else {
-      console.log(`Successfully reset session ${sessionId}, deleted ${deletedCount || 0} answers`);
+      // Successfully reset session
     }
     
     // Also reset the session status and feedback
@@ -52,8 +52,8 @@ async function resetSessionAnswers(sessionId: string) {
       })
       .eq("id", sessionId);
       
-  } catch (error) {
-    console.error("Error in resetSessionAnswers:", error);
+  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
+    // Error in resetSessionAnswers
     // Continue with the interview even if reset fails
   }
 }
@@ -102,9 +102,18 @@ export async function streamInterviewResponse({
     }
 
     // Prepare metadata
+    // Define the structure of interview metadata
+    
     const metadata = {
       threadId: response.data.thread_id,
-      nextQuestion: response.data.next_question,
+      nextQuestion: response.data.next_question ? {
+        id: response.data.next_question.id || "",
+        question_text: response.data.next_question.question_text,
+        question_type: response.data.next_question.question_type,
+        related_skill: response.data.next_question.related_skill,
+        difficulty: response.data.next_question.difficulty,
+        focus_area: response.data.next_question.focus_area,
+      } : undefined,
       status: response.data.status,
       isComplete: false,
     };
@@ -134,7 +143,7 @@ export async function streamInterviewResponse({
       metadata: JSON.parse(JSON.stringify(metadata)), // Ensure it's serializable
     };
   } catch (error) {
-    console.error("Error in interview stream:", error);
+    // Error in interview stream
 
     // Return error as a stream
     const encoder = new TextEncoder();
@@ -152,6 +161,8 @@ export async function streamInterviewResponse({
     return {
       stream: errorStream,
       metadata: {
+        threadId: "",
+        isComplete: false,
         error: error instanceof Error ? error.message : "Unknown error",
       },
     };

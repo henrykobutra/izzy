@@ -53,7 +53,7 @@ export interface WeaknessToAddress {
 
 export interface InterviewQuestion {
   question_text: string;
-  question_type: 'technical' | 'behavioral' | 'situational';
+  question_type: 'technical' | 'behavioral' | 'situational' | 'general';
   related_skill: string;
   difficulty: 'easy' | 'medium' | 'hard';
   focus_area: string;
@@ -118,3 +118,6 @@ export interface SessionData {
   title: string;
   date: string;
 }
+
+// Alias for strategist agent response
+export type StrategistResponse = Strategy;

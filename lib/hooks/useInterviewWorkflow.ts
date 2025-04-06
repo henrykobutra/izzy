@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { StrategistResponse } from '@/types/strategy';
 
 export type InterviewStep = 'setup' | 'strategy' | 'interview' | 'evaluation';
 
@@ -11,8 +12,8 @@ export function useInterviewWorkflow() {
   const [jobDescription, setJobDescription] = useState('');
 
   // Handle job description submission
-  const handleJobDescriptionSubmit = async () => {
-    if (!jobDescription.trim()) return;
+  const handleJobDescriptionSubmit = async (): Promise<{ success: boolean; sessionId?: string; strategy?: StrategistResponse; error?: string }> => {
+    if (!jobDescription.trim()) return { success: false, error: 'No job description provided' };
     
     setIsProcessing(true);
     
@@ -22,22 +23,22 @@ export function useInterviewWorkflow() {
       const result = await processJobDescription(jobDescription);
       
       if (result.success) {
-        console.log('Job and resume analysis complete:', result.data);
+        // Job and resume analysis complete
         setJobDescriptionEntered(true);
         setCurrentStep('strategy');
         
         return {
           success: true,
           sessionId: result.data?.sessionId || '',
-          strategy: result.data?.strategy || {}
+          strategy: result.data?.strategy || {} as Record<string, unknown>
         };
       } else {
-        console.error('Failed to process job description:', result.error);
+        // Failed to process job description
         alert(`Error: ${result.error}`);
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Error submitting job description:', error);
+      // Error submitting job description
       alert('Failed to process job description. Please try again.');
       return { 
         success: false, 
@@ -52,7 +53,7 @@ export function useInterviewWorkflow() {
   const startInterview = async (interviewSessions: Array<{ id: string }>) => {
     // If we don't have an active session ID, we can't start the interview
     if (!interviewSessions || interviewSessions.length === 0) {
-      console.error('No active interview session found');
+      // No active interview session found
       return false;
     }
     
@@ -62,8 +63,8 @@ export function useInterviewWorkflow() {
       // Move to the interview step
       setCurrentStep('interview');
       return true;
-    } catch (error) {
-      console.error('Error starting interview:', error);
+    } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
+      // Error starting interview
       alert('Failed to start the interview. Please try again.');
       return false;
     } finally {

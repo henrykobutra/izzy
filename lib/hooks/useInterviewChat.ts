@@ -91,8 +91,6 @@ export function useInterviewChat({
 
         setMessages((messages) => [...messages, pendingMessage]);
 
-        console.log("Sending message with question ID:", currentQuestion?.id);
-
         // Call streaming server action
         const { stream, metadata } = await streamInterviewResponse({
           sessionId,
@@ -153,8 +151,8 @@ export function useInterviewChat({
               )
             );
           }
-        } catch (streamError) {
-          console.error("Error reading stream:", streamError);
+        } catch (_streamError) { // eslint-disable-line @typescript-eslint/no-unused-vars
+          // Handle stream error
           setError("Error reading stream response");
         }
 
@@ -166,15 +164,7 @@ export function useInterviewChat({
 
           if (metadata.nextQuestion) {
             if (!metadata.nextQuestion.id) {
-              console.warn(
-                "Received question without ID:",
-                metadata.nextQuestion
-              );
-            } else {
-              console.log(
-                "Setting current question with ID:",
-                metadata.nextQuestion.id
-              );
+              // Handle question without ID silently
             }
 
             setCurrentQuestion({
@@ -195,8 +185,8 @@ export function useInterviewChat({
             setIsComplete(true);
           }
         }
-      } catch (error) {
-        console.error("Error in streaming interview response:", error);
+      } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
+        // Error in streaming interview response
         setError("Error processing your request. Please try again.");
 
         // Add error message
@@ -300,8 +290,8 @@ export function useInterviewChat({
             accumulatedContent += finalContent;
             setMessages([{ ...responseMessage, content: accumulatedContent }]);
           }
-        } catch (streamError) {
-          console.error("Error reading stream:", streamError);
+        } catch (_streamError) { // eslint-disable-line @typescript-eslint/no-unused-vars
+          // Handle stream error
           setError("Error reading stream response");
         }
 
@@ -328,8 +318,8 @@ export function useInterviewChat({
         }
 
         setIsFirstInteraction(false);
-      } catch (error) {
-        console.error("Error starting interview:", error);
+      } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
+        // Error starting interview
         setError("Error starting interview. Please try again.");
 
         // Add error message
@@ -480,8 +470,8 @@ export function useInterviewChat({
               // Continue polling after a delay
               setTimeout(checkEvaluationStatus, 2000);
             }
-          } catch (checkError) {
-            console.error("Error checking evaluation status:", checkError);
+          } catch (_checkError) { // eslint-disable-line @typescript-eslint/no-unused-vars
+            // Error checking evaluation status
             // After several retries, allow the user to proceed anyway
             setIsComplete(true);
             setIsEndingInterview(false);
@@ -497,7 +487,7 @@ export function useInterviewChat({
         setIsLoading(false);
       }
     } catch (error) {
-      console.error("Error ending interview:", error);
+      // Error ending interview
       setError(
         error instanceof Error
           ? error.message
