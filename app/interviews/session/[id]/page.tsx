@@ -320,11 +320,20 @@ export default function InterviewSessionPage() {
                         <div className="flex justify-start">
                           <div className="max-w-[80%] p-3 rounded-lg bg-muted/30 rounded-tl-none">
                             <div className="flex items-center gap-2">
-                              <Bot className="h-4 w-4 text-amber-500" />
-                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                              <span className="text-xs font-medium">
-                                Izzy is typing...
-                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-medium">
+                                  Thinking
+                                </span>
+                                <span className="flex gap-1">
+                                  <span className="animate-bounce [animation-delay:-0.3s]">
+                                    .
+                                  </span>
+                                  <span className="animate-bounce [animation-delay:-0.15s]">
+                                    .
+                                  </span>
+                                  <span className="animate-bounce">.</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -394,7 +403,7 @@ export default function InterviewSessionPage() {
                       }
                     }}
                     className="gap-2 cursor-pointer"
-                    disabled={isResetting}
+                    disabled={isResetting || isLoading}
                     type="button"
                   >
                     {isResetting ? (
@@ -439,7 +448,7 @@ export default function InterviewSessionPage() {
                     {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing...
+                        Processing Answer...
                       </>
                     ) : isComplete ? (
                       <>

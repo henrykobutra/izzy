@@ -39,6 +39,7 @@ export function useInterviewChat({
   const [isComplete, setIsComplete] = useState(false);
   const [isFirstInteraction, setIsFirstInteraction] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   // Use Vercel AI SDK's useChat hook with our custom API
   const { messages, input, handleInputChange, setMessages, isLoading, error } =
@@ -91,6 +92,9 @@ export function useInterviewChat({
     async (content: string) => {
       if (!sessionId) return;
 
+      // Set streaming state
+      setIsStreaming(true);
+
       // Optimistically add message to UI
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -127,17 +131,17 @@ export function useInterviewChat({
           content: "",
         };
 
+        // Remove loading message and add the real one
+        setMessages((messages) =>
+          messages
+            .filter((m) => m.id !== pendingMessage.id)
+            .concat(responseMessage)
+        );
+
         // Handle streaming
         try {
           const reader = stream.getReader();
           const decoder = new TextDecoder();
-
-          // Remove loading message and add the real one
-          setMessages((messages) =>
-            messages
-              .filter((m) => m.id !== pendingMessage.id)
-              .concat(responseMessage)
-          );
 
           // Read and process stream chunks
           let done = false;
@@ -214,6 +218,9 @@ export function useInterviewChat({
               "Sorry, there was an error processing your request. Please try again.",
           },
         ]);
+      } finally {
+        // Clear streaming state
+        setIsStreaming(false);
       }
     },
     [sessionId, threadId, currentQuestion, setMessages]
@@ -362,7 +369,7 @@ export function useInterviewChat({
     input,
     handleInputChange,
     handleSubmit,
-    isLoading,
+    isLoading: isLoading || isStreaming,
     error,
 
     // Interview state
