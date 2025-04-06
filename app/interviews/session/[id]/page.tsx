@@ -12,6 +12,7 @@ import {
   User,
   RefreshCw,
   MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -21,6 +22,12 @@ import { Footer } from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Card,
   CardContent,
@@ -139,6 +146,21 @@ export default function InterviewSessionPage() {
     ) {
       e.preventDefault();
       handleSubmit(e as unknown as FormEvent<HTMLFormElement>);
+    }
+  };
+
+  // Handle ending the interview early
+  const endInterview = () => {
+    if (messages.length > 1 && !isComplete) {
+      if (
+        confirm(
+          "Are you sure you want to end this interview? Your progress will be saved and you can view the results."
+        )
+      ) {
+        router.push(`/interviews/results/${sessionId}`);
+      }
+    } else {
+      router.push(`/interviews/results/${sessionId}`);
     }
   };
 
@@ -385,40 +407,31 @@ export default function InterviewSessionPage() {
                 </form>
               </CardContent>
               <CardFooter className="flex justify-between">
-                {/* Reset button on the left */}
-                <div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      if (messages.length > 1 && !isComplete) {
-                        if (
-                          confirm(
-                            "This will reset the current interview. Your previous answers will still be saved in history. Continue?"
-                          )
-                        ) {
-                          startNewInterview();
-                        }
-                      } else {
-                        startNewInterview();
-                      }
-                    }}
-                    className="gap-2 cursor-pointer"
-                    disabled={isResetting || isLoading}
-                    type="button"
-                  >
-                    {isResetting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Resetting...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4" />
-                        Reset Interview
-                      </>
-                    )}
-                  </Button>
-                </div>
+                {/* Interview actions dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      Actions
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={startNewInterview}
+                      disabled={isResetting || isLoading}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {isResetting ? "Resetting..." : "Reset Interview"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={endInterview}
+                      disabled={isComplete}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      End Interview Early
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Submit button and View Results on the right */}
                 <div className="flex">

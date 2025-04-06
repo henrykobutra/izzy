@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { 
-  getInterviewQuestions, 
-  submitInterviewAnswer
-} from '@/lib/actions/interview-handler';
-import { Loader2, Send, MessageSquare, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect, useRef } from "react";
+import {
+  getInterviewQuestions,
+  submitInterviewAnswer,
+} from "@/lib/actions/interview-handler";
+import { Loader2, Send, MessageSquare, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 // User avatar component
 function User(props: React.SVGProps<SVGSVGElement>) {
@@ -27,11 +27,11 @@ function User(props: React.SVGProps<SVGSVGElement>) {
       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
-  )
+  );
 }
 
 interface Message {
-  role: 'user' | 'interviewer';
+  role: "user" | "interviewer";
   content: string;
   questionId?: string;
 }
@@ -49,13 +49,18 @@ interface InterviewInterfaceProps {
   onComplete: () => void;
 }
 
-export default function InterviewInterface({ sessionId, onComplete }: InterviewInterfaceProps) {
+export default function InterviewInterface({
+  sessionId,
+  onComplete,
+}: InterviewInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [userInput, setUserInput] = useState('');
+  const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [status, setStatus] = useState<InterviewStatus | null>(null);
-  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(
+    null
+  );
   const [isComplete, setIsComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,35 +74,47 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
           // Create mock thread ID since we're using the Supabase version instead of OpenAI
           const mockThreadId = `thread-${sessionId}`;
           setThreadId(mockThreadId);
-          
+
           // Create welcome message if questions exist
           if (result.data.questions && result.data.questions.length > 0) {
             const firstQuestion = result.data.questions[0];
-            setMessages([{
-              role: 'interviewer',
-              content: `Welcome to your interview! Let's begin with the first question: ${firstQuestion.question_text}`
-            }]);
+            setMessages([
+              {
+                role: "interviewer",
+                content: `Welcome to your interview! Let's begin with the first question: ${firstQuestion.question_text}`,
+              },
+            ]);
             setCurrentQuestionId(firstQuestion.id || null);
           } else {
-            setMessages([{
-              role: 'interviewer',
-              content: 'Welcome to your interview! Unfortunately, no questions are available.'
-            }]);
+            setMessages([
+              {
+                role: "interviewer",
+                content:
+                  "Welcome to your interview! Unfortunately, no questions are available.",
+              },
+            ]);
           }
-          
+
           // Create mock status
           setStatus({
             current_question_index: 1,
             total_questions: result.data.questions?.length || 0,
-            estimated_completion_percentage: result.data.questions?.length > 0 ? (1 / result.data.questions.length) * 100 : 0,
-            areas_covered: ['Introduction'],
-            remaining_areas: ['Technical Skills', 'Experience', 'Problem Solving']
+            estimated_completion_percentage:
+              result.data.questions?.length > 0
+                ? (1 / result.data.questions.length) * 100
+                : 0,
+            areas_covered: ["Introduction"],
+            remaining_areas: [
+              "Technical Skills",
+              "Experience",
+              "Problem Solving",
+            ],
           });
         } else {
-          console.error('Failed to start interview:', result.error);
+          console.error("Failed to start interview:", result.error);
         }
       } catch (error) {
-        console.error('Error starting interview:', error);
+        console.error("Error starting interview:", error);
       } finally {
         setIsLoading(false);
       }
@@ -108,81 +125,153 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
 
   // Scroll to bottom of messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSubmit = async () => {
     if (!userInput.trim() || !threadId || isLoading) return;
-    
+
     const userMessage = userInput.trim();
-    setUserInput('');
+    setUserInput("");
     setIsLoading(true);
-    
+
     // Add user message to state
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: userMessage,
+        questionId: currentQuestionId || undefined,
+      },
+    ]);
+
     try {
-      const result = await submitInterviewAnswer({ 
-        sessionId, 
-        questionId: currentQuestionId || '', 
-        answer: userMessage 
+      const result = await submitInterviewAnswer({
+        sessionId,
+        questionId: currentQuestionId || "",
+        answer: userMessage,
       });
-      if (result.success) {
+
+      if (result.success && result.feedback) {
         // Add feedback as interviewer response
-        const feedbackMessage = result.feedback?.summary || "Thank you for your answer.";
-        setMessages(prev => [...prev, { role: 'interviewer', content: feedbackMessage }]);
-        
+        const feedbackMessage =
+          result.feedback.summary || "Thank you for your answer.";
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "interviewer",
+            content: feedbackMessage,
+            questionId: currentQuestionId || undefined,
+          },
+        ]);
+
+        // If there are specific strengths or improvements, add them as additional messages
+        if (result.feedback.strengths?.length) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "interviewer",
+              content: `Strengths: ${result.feedback.strengths.join(", ")}`,
+              questionId: currentQuestionId || undefined,
+            },
+          ]);
+        }
+
+        if (result.feedback.improvements?.length) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "interviewer",
+              content: `Areas for improvement: ${result.feedback.improvements.join(
+                ", "
+              )}`,
+              questionId: currentQuestionId || undefined,
+            },
+          ]);
+        }
+
         // Find current question index
         const currentIndex = status ? status.current_question_index : 0;
         const totalQuestions = status ? status.total_questions : 0;
-        
+
         // Move to next question if there are more
         if (currentIndex < totalQuestions) {
           // Get questions from state or fetch them again if needed
           const nextIndex = currentIndex + 1;
           const nextQuestion = await getInterviewQuestions(sessionId);
-          
-          if (nextQuestion.success && nextQuestion.data?.questions && nextQuestion.data.questions[nextIndex - 1]) {
+
+          if (
+            nextQuestion.success &&
+            nextQuestion.data?.questions &&
+            nextQuestion.data.questions[nextIndex - 1]
+          ) {
             const questionObj = nextQuestion.data.questions[nextIndex - 1];
             setCurrentQuestionId(questionObj.id);
-            
+
             // Add next question as message
-            setMessages(prev => [...prev, { 
-              role: 'interviewer', 
-              content: `Next question: ${questionObj.question_text}`
-            }]);
-            
-            // Update status
-            setStatus(prev => prev ? {
+            setMessages((prev) => [
               ...prev,
-              current_question_index: nextIndex,
-              estimated_completion_percentage: (nextIndex / totalQuestions) * 100,
-              areas_covered: [...prev.areas_covered, questionObj.focus_area || 'General']
-            } : null);
+              {
+                role: "interviewer",
+                content: `Next question: ${questionObj.question_text}`,
+                questionId: questionObj.id,
+              },
+            ]);
+
+            // Update status
+            setStatus((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    current_question_index: nextIndex,
+                    estimated_completion_percentage:
+                      (nextIndex / totalQuestions) * 100,
+                    areas_covered: [
+                      ...prev.areas_covered,
+                      questionObj.focus_area || "General",
+                    ],
+                  }
+                : null
+            );
           }
         } else {
           // Interview is complete
           setCurrentQuestionId(null);
           setIsComplete(true);
-          
+
           // Add completion message
-          setMessages(prev => [...prev, { 
-            role: 'interviewer', 
-            content: "That completes our interview. Thank you for your time and responses!"
-          }]);
-          
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "interviewer",
+              content:
+                "That completes our interview. Thank you for your time and responses!",
+            },
+          ]);
+
           onComplete();
         }
       } else {
-        console.error('Failed to submit answer:', result.error);
+        console.error("Failed to submit answer:", result.error);
         // Add error message
-        setMessages(prev => [...prev, { 
-          role: 'interviewer', 
-          content: 'Sorry, I encountered an error processing your response. Let\'s continue with the next question.' 
-        }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "interviewer",
+            content:
+              "Sorry, I encountered an error processing your response. Let's continue with the next question.",
+          },
+        ]);
       }
     } catch (error) {
-      console.error('Error submitting answer:', error);
+      console.error("Error submitting answer:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "interviewer",
+          content: "An unexpected error occurred. Please try again.",
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -206,53 +295,62 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
           <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>Question {status.current_question_index} of {status.total_questions}</span>
+              <span>
+                Question {status.current_question_index} of{" "}
+                {status.total_questions}
+              </span>
             </div>
             {status.remaining_areas.length > 0 && (
-              <span>Coming up: {status.remaining_areas.join(', ')}</span>
+              <span>Coming up: {status.remaining_areas.join(", ")}</span>
             )}
           </div>
         </div>
       )}
-      
+
       {/* Messages area */}
       <div className="flex-grow overflow-y-auto mb-4 space-y-4 p-2">
         {messages.length === 0 && isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Starting interview...</p>
+              <p className="text-sm text-muted-foreground">
+                Starting interview...
+              </p>
             </div>
           </div>
         ) : (
           messages.map((message, index) => (
-            <div 
-              key={index} 
-              className={`flex items-start gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+            <div
+              key={index}
+              className={`flex items-start gap-3 ${
+                message.role === "user" ? "flex-row-reverse" : ""
+              }`}
             >
               <div className="flex-shrink-0 mt-1">
-                <div 
+                <div
                   className={`flex items-center justify-center h-8 w-8 rounded-full ${
-                    message.role === 'user' 
-                      ? 'bg-primary/20' 
-                      : 'bg-amber-100 dark:bg-amber-900/30'
+                    message.role === "user"
+                      ? "bg-primary/20"
+                      : "bg-amber-100 dark:bg-amber-900/30"
                   }`}
                 >
-                  {message.role === 'user' ? (
+                  {message.role === "user" ? (
                     <User className="h-4 w-4 text-primary" />
                   ) : (
                     <MessageSquare className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   )}
                 </div>
               </div>
-              <div 
+              <div
                 className={`flex-1 p-3 rounded-lg ${
-                  message.role === 'user' 
-                    ? 'bg-primary/5' 
-                    : 'bg-muted/30'
+                  message.role === "user" ? "bg-primary/5" : "bg-muted/30"
                 }`}
               >
-                <p className={`text-sm ${message.role === 'interviewer' ? 'font-medium' : ''}`}>
+                <p
+                  className={`text-sm ${
+                    message.role === "interviewer" ? "font-medium" : ""
+                  }`}
+                >
                   {message.content}
                 </p>
               </div>
@@ -261,7 +359,7 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
         )}
         <div ref={messagesEndRef} />
       </div>
-      
+
       {/* Input area */}
       <div className="mt-auto">
         <div className="flex items-end gap-2">
@@ -273,13 +371,13 @@ export default function InterviewInterface({ sessionId, onComplete }: InterviewI
             rows={3}
             disabled={isLoading || isComplete}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit();
               }
             }}
           />
-          <Button 
+          <Button
             onClick={handleSubmit}
             disabled={!userInput.trim() || isLoading || isComplete}
             className="mb-1"
