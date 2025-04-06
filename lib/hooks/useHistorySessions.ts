@@ -35,6 +35,7 @@ export function useHistorySessions() {
             created_at,
             status,
             strategy,
+            session_feedback,
             job_posting:job_postings(id, title, company, parsed_requirements)
           `
           )
@@ -137,6 +138,21 @@ export function useHistorySessions() {
 
     if (completedSessions.length === 0) return 0;
 
+    // First check if we have session_feedback to use (preferred)
+    const sessionsWithFeedback = completedSessions.filter(
+      (session) => session.session_feedback && session.session_feedback.overall_score
+    );
+    
+    if (sessionsWithFeedback.length > 0) {
+      const total = sessionsWithFeedback.reduce((sum, session) => {
+        // Since we've already filtered for sessions with feedback and overall_score,
+        // we can safely use non-null assertion here
+        return sum + (session.session_feedback?.overall_score || 0);
+      }, 0);
+      return Number((total / sessionsWithFeedback.length).toFixed(1));
+    }
+    
+    // Fall back to calculating from individual evaluations if no session feedback
     const total = completedSessions.reduce((sum, session) => {
       let sessionTotal = 0;
       let sessionCount = 0;

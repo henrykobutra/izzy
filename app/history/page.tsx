@@ -2,13 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  BarChart4,
-  Calendar,
-  CheckCircle,
-  Loader2,
-  TrendingUp,
-} from "lucide-react";
+import { BarChart4, Calendar, Loader2 } from "lucide-react";
 
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useHistorySessions } from "@/lib/hooks/useHistorySessions";
@@ -19,8 +13,6 @@ import { EmptyState } from "@/components/interviews/empty-state";
 import { HistoryHeader } from "@/components/interviews/history-header";
 import { HistoryItem } from "@/components/interviews/history-item";
 import { StatsCard } from "@/components/interviews/stats-card";
-import { SkillProgress } from "@/components/interviews/skill-progress";
-import { FeedbackSummary } from "@/components/interviews/feedback-summary";
 
 export default function HistoryPage() {
   const { user, loading } = useAuth();
@@ -29,9 +21,6 @@ export default function HistoryPage() {
     isDataLoading,
     filteredSessions,
     averageScore,
-    topSkills,
-    commonImprovements,
-    skillScores,
     deleteSession,
   } = useHistorySessions();
 
@@ -69,8 +58,8 @@ export default function HistoryPage() {
           ) : (
             // History and performance data
             <>
-              {/* Performance overview cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Stats overview */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StatsCard
                   title="Total Interviews"
                   value={filteredSessions.length}
@@ -79,22 +68,8 @@ export default function HistoryPage() {
                 <StatsCard
                   title="Average Score"
                   value={averageScore}
-                  suffix="/ 5"
+                  suffix="/10"
                   icon={<BarChart4 className="h-4 w-4 text-primary" />}
-                />
-                <StatsCard
-                  title="Top Skill"
-                  value={topSkills[0] || "N/A"}
-                  icon={
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  }
-                />
-                <StatsCard
-                  title="To Improve"
-                  value={commonImprovements[0] || "N/A"}
-                  icon={
-                    <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  }
                 />
               </div>
 
@@ -114,16 +89,6 @@ export default function HistoryPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Skills and progress analysis */}
-              {filteredSessions.filter(
-                (session) => session.status === "completed"
-              ).length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                  <SkillProgress skillScores={skillScores} />
-                  <FeedbackSummary commonImprovements={commonImprovements} />
-                </div>
-              )}
             </>
           )}
         </div>

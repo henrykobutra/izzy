@@ -69,6 +69,17 @@ export interface HistoryItemSession {
     skill_mapping?: Record<string, string[]>;
   } | null;
   questions: InterviewQuestion[];
+  session_feedback?: {
+    overall_score: number;
+    technical_score: number;
+    communication_score: number; 
+    problem_solving_score: number;
+    culture_fit_score: number;
+    strengths: string[];
+    weaknesses: string[];
+    recommendations: string[];
+    summary: string;
+  } | null;
 }
 
 interface HistoryItemProps {

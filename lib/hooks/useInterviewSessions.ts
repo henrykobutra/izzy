@@ -11,6 +11,17 @@ export interface InterviewSession {
   status: InterviewStatus;
   score?: number;
   jobPostingId?: string;
+  session_feedback?: {
+    overall_score: number;
+    technical_score: number;
+    communication_score: number; 
+    problem_solving_score: number;
+    culture_fit_score: number;
+    strengths: string[];
+    weaknesses: string[];
+    recommendations: string[];
+    summary: string;
+  };
   strategy?: {
     job_analysis?: {
       title?: string;
@@ -83,7 +94,8 @@ export function useInterviewSessions() {
               id,
               title,
               company
-            )
+            ),
+            session_feedback
           `)
           .eq('profile_id', user.id)
           .order('created_at', { ascending: false })
@@ -109,9 +121,10 @@ export function useInterviewSessions() {
               title: sessionTitle,
               date: new Date(session.created_at),
               status: (session.status as InterviewStatus) || 'planned',
-              score: session.strategy?.overall_score || undefined,
+              score: session.session_feedback?.overall_score || session.strategy?.overall_score || undefined,
               jobPostingId: session.job_postings?.id || session.job_posting_id,
-              strategy: session.strategy
+              strategy: session.strategy,
+              session_feedback: session.session_feedback
             };
           });
         }
