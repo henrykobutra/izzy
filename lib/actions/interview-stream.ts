@@ -1,6 +1,62 @@
 "use server";
 
 import { startInterview, continueInterview } from "@/agents/interviewer/agent";
+import { createClient } from "@/lib/supabase/server";
+
+/**
+ * Helper function to reset all answers and evaluations for a session
+ * This is called when starting a new interview to ensure a clean slate
+ */
+async function resetSessionAnswers(sessionId: string) {
+  try {
+    console.log(`Resetting interview session ${sessionId} before starting a new interview`);
+    const supabase = await createClient();
+    
+    // Get all questions for this session
+    const { data: questions, error: questionsError } = await supabase
+      .from("interview_questions")
+      .select("id")
+      .eq("session_id", sessionId);
+      
+    if (questionsError) {
+      console.error("Error fetching questions for reset:", questionsError);
+      return; // Continue with the interview even if reset fails
+    }
+    
+    if (!questions || questions.length === 0) {
+      return; // No questions to reset
+    }
+    
+    // Delete all user answers for questions in this session
+    // This will cascade to delete evaluations as well due to foreign key constraints
+    const { error: deleteAnswersError, count: deletedCount } = await supabase
+      .from("user_answers")
+      .delete({ count: 'exact' })
+      .in(
+        "question_id",
+        questions.map(q => q.id)
+      );
+      
+    if (deleteAnswersError) {
+      console.error("Error deleting answers during reset:", deleteAnswersError);
+    } else {
+      console.log(`Successfully reset session ${sessionId}, deleted ${deletedCount || 0} answers`);
+    }
+    
+    // Also reset the session status and feedback
+    await supabase
+      .from("interview_sessions")
+      .update({
+        status: "planned",
+        session_feedback: null
+      })
+      .eq("id", sessionId);
+      
+  } catch (error) {
+    console.error("Error in resetSessionAnswers:", error);
+    // Continue with the interview even if reset fails
+  }
+}
 
 /**
  * Server action that streams interview responses from the interviewer agent
@@ -20,7 +76,10 @@ export async function streamInterviewResponse({
     let response;
 
     if (!threadId) {
-      // Start a new interview
+      // For a new interview, first reset the session by clearing old answers
+      await resetSessionAnswers(sessionId);
+      
+      // Then start a new interview
       response = await startInterview(sessionId);
     } else if (message) {
       // Continue an existing interview with the user's message

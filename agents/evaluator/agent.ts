@@ -111,13 +111,17 @@ export async function evaluateSession(sessionId: string) {
     }
 
     // Prepare context for OpenAI evaluation
+    // Handle job_posting which might be returned as an array or a single object
+    const jobPosting = Array.isArray(session.job_posting)
+      ? session.job_posting[0] as JobPosting
+      : session.job_posting as JobPosting;
+
     const evaluationContext = {
       job_info: {
-        title: (session.job_posting[0] as JobPosting).title,
-        company: (session.job_posting[0] as JobPosting).company,
-        description: (session.job_posting[0] as JobPosting).description,
-        requirements: (session.job_posting[0] as JobPosting)
-          .parsed_requirements,
+        title: jobPosting.title,
+        company: jobPosting.company,
+        description: jobPosting.description,
+        requirements: jobPosting.parsed_requirements,
       },
       strategy: session.strategy,
       questions_and_answers: questions

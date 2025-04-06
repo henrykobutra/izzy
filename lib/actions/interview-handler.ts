@@ -516,9 +516,6 @@ export async function completeInterviewSession(
 
     const hasAnswers = count && count > 0;
 
-    // Check if this is a re-evaluation of an existing session (status will be "completed")
-    const isReEvaluation = sessionData.status === "completed";
-
     // Get the evaluator agent and run evaluation in the background
     (async () => {
       try {
@@ -528,29 +525,41 @@ export async function completeInterviewSession(
             `Starting session evaluation for session ${sessionId} with ${count} answers`
           );
 
-          // If this is a re-evaluation, first clear the existing evaluations for this session
-          if (isReEvaluation) {
-            console.log(
-              `This is a re-evaluation of session ${sessionId}, clearing existing evaluations`
+          // At evaluation time, we just ensure there are no leftover evaluations
+          // Most clearing happens when starting a new interview session
+          console.log(
+            `Checking for any existing evaluations for session ${sessionId}`
+          );
+
+          // Find any existing evaluations for answers to this session's questions
+          const { data: allSessionAnswers } = await supabase
+            .from("user_answers")
+            .select("id")
+            .in(
+              "question_id",
+              sessionData.questions.map((q: { id: string }) => q.id)
             );
 
-            // Get all answers for this session
-            const { data: sessionAnswers } = await supabase
-              .from("user_answers")
-              .select("id")
+          if (allSessionAnswers && allSessionAnswers.length > 0) {
+            // Check if there are any evaluations to clean up
+            const { count: evaluationCount } = await supabase
+              .from("evaluations")
+              .select("id", { count: 'exact', head: true })
               .in(
-                "question_id",
-                sessionData.questions.map((q: { id: string }) => q.id)
+                "answer_id",
+                allSessionAnswers.map((a) => a.id)
               );
-
-            if (sessionAnswers && sessionAnswers.length > 0) {
-              // Delete all evaluations for these answers
-              const { error: deleteError } = await supabase
+              
+            if (evaluationCount && evaluationCount > 0) {
+              console.log(`Found ${evaluationCount} existing evaluations to clean up`);
+              
+              // Delete any remaining evaluations
+              const { error: deleteError, count: deletedCount } = await supabase
                 .from("evaluations")
-                .delete()
+                .delete({ count: 'exact' })
                 .in(
                   "answer_id",
-                  sessionAnswers.map((a) => a.id)
+                  allSessionAnswers.map((a) => a.id)
                 );
 
               if (deleteError) {
@@ -560,20 +569,22 @@ export async function completeInterviewSession(
                 );
               } else {
                 console.log(
-                  `Successfully cleared ${sessionAnswers.length} existing evaluations`
+                  `Successfully cleared ${deletedCount || 0} existing evaluations`
                 );
               }
+            } else {
+              console.log("No existing evaluations found, starting with clean slate");
             }
-
-            // Also reset the session feedback
-            await supabase
-              .from("interview_sessions")
-              .update({
-                session_feedback: null,
-                status: "in_progress", // Set back to in progress for reevaluation
-              })
-              .eq("id", sessionId);
           }
+          
+          // Also reset the session feedback
+          await supabase
+            .from("interview_sessions")
+            .update({
+              session_feedback: null,
+              status: "in_progress", // Set back to in progress for evaluation
+            })
+            .eq("id", sessionId);
 
           // Run the evaluation
           const { evaluateSession } = await import("@/agents/evaluator/agent");
@@ -674,15 +685,14 @@ export async function getInterviewResults(sessionId: string): Promise<{
   try {
     const supabase = await createClient();
 
-    // Get the session with all related data
+    // Get the session with related job posting and questions data
     const { data: session, error: sessionError } = await supabase
       .from("interview_sessions")
       .select(
         `
         *,
-        job_posting (*),
-        questions (*),
-        answers (*)
+        job_posting:job_postings (*),
+        questions:interview_questions (*)
       `
       )
       .eq("id", sessionId)
@@ -703,11 +713,14 @@ export async function getInterviewResults(sessionId: string): Promise<{
       };
     }
 
-    // Get all answers for this session
+    // Get all answers for questions in this session
     const { data: answers, error: answersError } = await supabase
-      .from("answers")
+      .from("user_answers")
       .select("*")
-      .eq("session_id", sessionId);
+      .in(
+        "question_id", 
+        session.questions ? session.questions.map((q: { id: string }) => q.id) : []
+      );
 
     if (answersError) {
       console.error("Error fetching answers:", answersError);
@@ -938,6 +951,72 @@ export async function deleteInterview(jobPostingId: string): Promise<{
     return { success: true };
   } catch (error) {
     console.error("Unexpected error in deleteInterview:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
+}
+
+/**
+ * Resets an interview session by clearing all user answers
+ * This is used when starting a new practice round with the same session
+ */
+export async function resetInterviewSession(sessionId: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    
+    console.log(`Resetting interview session ${sessionId}`);
+    
+    // Get all questions for this session
+    const { data: questions, error: questionsError } = await supabase
+      .from("interview_questions")
+      .select("id")
+      .eq("session_id", sessionId);
+      
+    if (questionsError) {
+      console.error("Error fetching questions for reset:", questionsError);
+      return { success: false, error: "Failed to fetch questions" };
+    }
+    
+    if (!questions || questions.length === 0) {
+      return { success: true }; // No questions to reset
+    }
+    
+    // Delete all user answers for questions in this session
+    // This will cascade to delete evaluations as well
+    const { error: deleteAnswersError, count: deletedCount } = await supabase
+      .from("user_answers")
+      .delete({ count: 'exact' })
+      .in(
+        "question_id",
+        questions.map(q => q.id)
+      );
+      
+    if (deleteAnswersError) {
+      console.error("Error deleting answers during reset:", deleteAnswersError);
+      return { success: false, error: "Failed to reset answers" };
+    }
+    
+    console.log(`Successfully reset session ${sessionId}, deleted ${deletedCount || 0} answers`);
+    
+    // Also reset the session status and feedback
+    const { error: updateError } = await supabase
+      .from("interview_sessions")
+      .update({
+        status: "planned",
+        session_feedback: null
+      })
+      .eq("id", sessionId);
+      
+    if (updateError) {
+      console.error("Error updating session status during reset:", updateError);
+      // Not critical, still consider reset successful
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Unexpected error in resetInterviewSession:", error);
     return { success: false, error: "An unexpected error occurred" };
   }
 }
