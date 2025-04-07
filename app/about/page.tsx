@@ -52,11 +52,17 @@ export default function AboutPage() {
                   Izzy AI was developed as an academic project for Houston Community College&apos;s 
                   ITAI 2376: Deep Learning course, under the guidance of Professor Patricia McManus.
                 </p>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mb-6">
                   The project addresses a common challenge: job interviews are high-stakes and nerve-wracking.
                   Generic preparation tools often provide random questions, ignoring your unique background
                   and the specific role requirements. Izzy solves this by creating a tailored, adaptive coach
                   that matches your skills to the job and helps you improve through practice.
+                </p>
+                <p className="text-muted-foreground">
+                  Built using the latest in AI technology, Izzy leverages OpenAI's Assistants API to power
+                  its four specialized agents, providing a seamless and personalized interview preparation
+                  experience. You can get started with just an email (passwordless authentication) or try 
+                  the system anonymously.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-6">
@@ -196,7 +202,7 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-xl font-bold">Frontend</h3>
                   <p className="text-center text-muted-foreground">
-                    Next.js 14, TypeScript, Tailwind CSS, shadcn/ui components
+                    Next.js 14, TypeScript, Tailwind CSS, shadcn/ui with new-york style variant
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4">
@@ -205,7 +211,7 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-xl font-bold">Backend</h3>
                   <p className="text-center text-muted-foreground">
-                    Supabase for authentication, database, and storage
+                    Supabase for authentication (email OTP and anonymous), database, and storage
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4">
@@ -214,7 +220,7 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-xl font-bold">AI Services</h3>
                   <p className="text-center text-muted-foreground">
-                    OpenAI API for language processing, SerpAPI for web search capabilities
+                    OpenAI Assistants API for all agent implementations
                   </p>
                 </div>
               </div>
@@ -236,7 +242,7 @@ export default function AboutPage() {
               </div>
               <div className="pt-4">
                 <Button size="lg" asChild>
-                  <Link href="/get-started">
+                  <Link href="/sign-in">
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

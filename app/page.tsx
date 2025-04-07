@@ -54,6 +54,9 @@ export default function Home() {
                 <div className="rounded-full bg-green-100 px-4 py-1.5 text-sm text-green-800 dark:bg-green-900/30 dark:text-green-400">
                   Free to Use
                 </div>
+                <div className="rounded-full bg-blue-100 px-4 py-1.5 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  OpenAI Assistants API
+                </div>
               </div>
             </div>
           </div>
@@ -148,7 +151,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-xl font-bold">Upload & Set Goals</h3>
                   <p className="text-center text-muted-foreground">
-                    Share your resume and target job description. No signup required.
+                    Share your resume and target job description. Use email authentication or try anonymously.
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4 p-6">
