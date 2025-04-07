@@ -24,9 +24,38 @@ export default function Home() {
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-          <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center space-y-6 text-center">
+        <section className="relative w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-primary/10 to-background/90 overflow-hidden">
+          {/* Blurry blob decorations */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Primary colored blob - top right */}
+            <div 
+              className="absolute top-[-15%] right-[-5%] w-[60%] h-[60%] rounded-full bg-primary/30 blur-[80px] opacity-70 animate-blob"
+              style={{ animationDelay: "0s" }}
+            />
+            {/* Secondary colored blob - bottom left */}
+            <div 
+              className="absolute bottom-[-5%] left-[-5%] w-[50%] h-[50%] rounded-full bg-blue-500/20 blur-[100px] opacity-60 animate-blob"
+              style={{ animationDelay: "2s" }}
+            />
+            {/* Tertiary colored blob - center right */}
+            <div 
+              className="absolute bottom-[15%] right-[0%] w-[40%] h-[40%] rounded-full bg-purple-500/20 blur-[80px] opacity-50 animate-blob"
+              style={{ animationDelay: "4s" }}
+            />
+            {/* Small accent blob - top left */}
+            <div 
+              className="absolute top-[10%] left-[5%] w-[30%] h-[30%] rounded-full bg-green-500/15 blur-[70px] opacity-50 animate-blob"
+              style={{ animationDelay: "3s" }}
+            />
+            {/* Small accent blob - bottom center */}
+            <div 
+              className="absolute bottom-[0%] left-[35%] w-[25%] h-[25%] rounded-full bg-amber-500/20 blur-[60px] opacity-40 animate-blob"
+              style={{ animationDelay: "1s" }}
+            />
+          </div>
+
+          <div className="container relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col items-center space-y-6 text-center backdrop-blur-[4px] p-6 rounded-xl bg-background/10 max-w-3xl mx-auto">
               <div className="space-y-3 max-w-3xl mx-auto">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
                   Your AI-powered <span className="text-primary">Interview Squad</span>
@@ -37,24 +66,24 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
-                <Button asChild>
+                <Button size="lg" asChild>
                   <Link href="/sign-in">
                     Get Started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
+                <Button size="lg" variant="outline" asChild>
                   <Link href="/about">Learn More</Link>
                 </Button>
               </div>
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <div className="rounded-full bg-primary/10 px-4 py-1.5 text-sm text-primary">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <div className="rounded-full bg-primary/10 px-4 py-1.5 text-sm text-primary backdrop-blur-sm">
                   Academic Project
                 </div>
-                <div className="rounded-full bg-green-100 px-4 py-1.5 text-sm text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                <div className="rounded-full bg-green-100/90 px-4 py-1.5 text-sm text-green-800 dark:bg-green-900/30 dark:text-green-400 backdrop-blur-sm">
                   Free to Use
                 </div>
-                <div className="rounded-full bg-blue-100 px-4 py-1.5 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                <div className="rounded-full bg-blue-100/90 px-4 py-1.5 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 backdrop-blur-sm">
                   OpenAI Assistants API
                 </div>
               </div>
@@ -174,7 +203,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="pt-8">
-                <Button size="lg" asChild>
+                <Button size="lg" asChild className="bg-primary/90 hover:bg-primary/100">
                   <Link href="/sign-in">
                     Try It Now
                     <ArrowRight className="ml-2 h-4 w-4" />

@@ -59,7 +59,7 @@ export default function AboutPage() {
                   that matches your skills to the job and helps you improve through practice.
                 </p>
                 <p className="text-muted-foreground">
-                  Built using the latest in AI technology, Izzy leverages OpenAI's Assistants API to power
+                  Built using the latest in AI technology, Izzy leverages OpenAI&apos;s Assistants API to power
                   its four specialized agents, providing a seamless and personalized interview preparation
                   experience. You can get started with just an email (passwordless authentication) or try 
                   the system anonymously.
