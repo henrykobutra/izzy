@@ -65,6 +65,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Redirect to dashboard if the user is authenticated and trying to access the sign-in page
+  if (path === "/sign-in" && user) {
+    const redirectUrl = new URL("/dashboard", request.url);
+    return NextResponse.redirect(redirectUrl);
+  }
+
   return response;
 }
 
