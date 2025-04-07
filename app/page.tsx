@@ -5,6 +5,10 @@ import {
   Bot,
   Search,
   BarChart,
+  Award,
+  Brain,
+  Clock,
+  BookOpen,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -209,6 +213,76 @@ export default function Home() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* About Snippet Section */}
+        <section className="w-full py-12 md:py-24 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900/50 dark:to-background">
+          <div className="container max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-10 md:grid-cols-2 md:gap-16 items-center">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tighter mb-6">About Izzy AI</h2>
+                <p className="text-muted-foreground mb-6">
+                  Izzy AI was developed as an academic project for Houston Community College&apos;s 
+                  ITAI 2376: Deep Learning course, addressing a common challenge: preparing for job interviews.
+                </p>
+                <p className="text-muted-foreground mb-6">
+                  Built using OpenAI&apos;s Assistants API, Izzy leverages four specialized AI agents to provide
+                  a seamless and personalized interview preparation experience tailored to your unique background
+                  and target role.
+                </p>
+                <div className="mt-8">
+                  <Button variant="outline" asChild>
+                    <Link href="/about">
+                      Learn More About Izzy
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col space-y-4">
+                  <div className="rounded-lg bg-primary/5 border border-primary/10 p-6">
+                    <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center mb-4">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-medium mb-2">Personalized Learning</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Adaptive coaching focused on your strengths and areas for improvement
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-blue-500/5 border border-blue-500/10 p-6">
+                    <div className="rounded-full bg-blue-500/10 w-10 h-10 flex items-center justify-center mb-4">
+                      <Clock className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <h3 className="font-medium mb-2">Time-Efficient</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Practice whenever is convenient, without scheduling constraints
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col space-y-4 mt-6">
+                  <div className="rounded-lg bg-purple-500/5 border border-purple-500/10 p-6">
+                    <div className="rounded-full bg-purple-500/10 w-10 h-10 flex items-center justify-center mb-4">
+                      <Brain className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <h3 className="font-medium mb-2">AI-Powered</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Advanced language models providing realistic interview experiences
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-green-500/5 border border-green-500/10 p-6">
+                    <div className="rounded-full bg-green-500/10 w-10 h-10 flex items-center justify-center mb-4">
+                      <Award className="h-5 w-5 text-green-500" />
+                    </div>
+                    <h3 className="font-medium mb-2">Results-Focused</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Designed to help you improve measurably with each practice session
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
