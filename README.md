@@ -18,6 +18,7 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
 - **Structured Feedback** - Receive scores and actionable improvement suggestions
 - **Progress Tracking** - Monitor your improvement over multiple practice sessions
 - **Anonymous Option** - Try the system without creating an account
+- **Passwordless Auth** - Simple and secure email-based authentication
 
 ## Getting Started
 
@@ -26,8 +27,7 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
 - Node.js 18.x or later
 - pnpm package manager
 - Supabase CLI (for local development)
-- OpenAI API key
-- Google Cloud Project (for Google authentication)
+- OpenAI API key with Assistants API access
 
 ### Installation
 
@@ -51,7 +51,12 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
    ```
    NEXT_PUBLIC_SUPABASE_URL=<YOUR_SUPABASE_URL>
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<YOUR_SUPABASE_ANON_KEY>
+   SUPABASE_SERVICE_ROLE_KEY=<YOUR_SUPABASE_SERVICE_ROLE_KEY>
    OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+   OPENAI_RESUME_PARSER_ASSISTANT_ID=<YOUR_OPENAI_ASSISTANT_ID>
+   OPENAI_STRATEGY_ASSISTANT_ID=<YOUR_OPENAI_ASSISTANT_ID>
+   OPENAI_INTERVIEWER_ASSISTANT_ID=<YOUR_OPENAI_ASSISTANT_ID>
+   OPENAI_EVALUATOR_ASSISTANT_ID=<YOUR_OPENAI_ASSISTANT_ID>
    ```
 
 5. Start the development server:
@@ -63,12 +68,12 @@ Izzy AI employs four collaborative agents to provide a comprehensive interview p
 
 ### Supabase Setup
 
-This project requires Supabase for authentication (including anonymous auth and Google login) and database functionality. You have two options:
+This project requires Supabase for authentication (including anonymous auth and email OTP) and database functionality. You have two options:
 
 #### Option 1: Supabase Cloud (Recommended for deployment)
 
 1. Create a free Supabase project at [https://supabase.com](https://supabase.com)
-2. Get your project URL and anon key from the project settings
+2. Get your project URL, anon key, and service role key from the project settings
 3. Add these to your `.env` file
 4. Push migrations to your remote database:
    ```bash
@@ -86,19 +91,19 @@ This project requires Supabase for authentication (including anonymous auth and 
    ```bash
    supabase db push
    ```
-4. Use the local URL and key provided when you run `supabase start`
+4. Use the local URL and keys provided when you run `supabase start`
 
-### Google Authentication Setup
+### OpenAI Assistants API Setup
 
-For Google authentication to work properly:
+This project uses OpenAI Assistants API for the agent implementation:
 
-1. Create a Google Cloud project and configure OAuth consent screen
-2. Create OAuth credentials (Web application type)
-3. Add authorized redirect URIs:
-   - For local development: `http://localhost:3000/auth/callback`
-   - For production: `https://your-domain.com/auth/callback`
-4. Configure Google provider in your Supabase project settings
-5. Follow the detailed instructions in the [Supabase Google Auth guide](https://supabase.com/docs/guides/auth/social-login/auth-google)
+1. Create an OpenAI account and obtain an API key
+2. Create four assistants in the OpenAI platform:
+   - Parser Assistant: For resume analysis
+   - Strategist Assistant: For interview strategy planning
+   - Interviewer Assistant: For conducting mock interviews
+   - Evaluator Assistant: For providing feedback
+3. Add the assistant IDs to your `.env` file
 
 ## Deployment
 
@@ -109,10 +114,7 @@ Izzy can be deployed to any platform that supports Next.js applications. The liv
 1. Fork this repository to your GitHub account
 2. Create a new project on [Vercel](https://vercel.com)
 3. Connect your GitHub repository
-4. Configure environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `OPENAI_API_KEY`
+4. Configure all environment variables from your `.env` file
 5. Deploy
 
 ### Other Hosting Options
@@ -127,24 +129,27 @@ You can also deploy to Netlify, Railway, or any other platform that supports Nex
 
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Supabase (Auth, Database, Storage)
-- **AI**: OpenAI API, SerpAPI for web search
+- **AI**: OpenAI Assistants API
 - **Deployment**: Vercel
 
 ## Project Structure
 
-- `app/` - Next.js application routes and pages
-- `components/` - React components
-- `agents/` - Agent logic and implementation
-- `lib/` - Utility functions and API wrappers
+- `app/` - Next.js application routes and pages using App Router
+- `components/` - React components (UI, interviews, resume, auth)
+- `agents/` - Agent logic and implementation for all four specialized agents
+- `lib/` - Utility functions, hooks, and API wrappers
 - `supabase/` - Database schema and migrations
+- `types/` - TypeScript type definitions
+- `providers/` - React context providers
 
-## Development Timeline
+## Commands
 
-- **March 31–April 7**: Setup and Parser agent implementation
-- **April 8–14**: Strategist agent with web search integration
-- **April 15–21**: Interviewer and Evaluator agents, complete interview flow
-- **April 22–28**: Reinforcement Learning integration and UI refinement
-- **April 29–May 5**: Testing, bug fixes, and demo preparation
+- Development: `pnpm dev`
+- Build: `pnpm build`
+- Start: `pnpm start`
+- Lint: `pnpm lint`
+- Supabase Local: `supabase start`
+- Supabase DB Push: `supabase db push`
 
 ## License
 
