@@ -105,8 +105,27 @@ export default function SignInPage() {
     return (
       <div className="flex min-h-screen flex-col">
         <NavBar activePath="/sign-in" />
-        <main className="flex-1 flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-4">
+        <main className="flex-1 flex items-center justify-center py-12 relative overflow-hidden">
+          {/* Blurry blob decorations */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Primary colored blob - top right */}
+            <div 
+              className="absolute top-[-15%] right-[-5%] w-[60%] h-[60%] rounded-full bg-primary/30 blur-[80px] opacity-70 animate-blob"
+              style={{ animationDelay: "0s" }}
+            />
+            {/* Secondary colored blob - bottom left */}
+            <div 
+              className="absolute bottom-[-5%] left-[-5%] w-[50%] h-[50%] rounded-full bg-blue-500/20 blur-[100px] opacity-60 animate-blob"
+              style={{ animationDelay: "2s" }}
+            />
+            {/* Tertiary colored blob - center right */}
+            <div 
+              className="absolute bottom-[15%] right-[0%] w-[40%] h-[40%] rounded-full bg-purple-500/20 blur-[80px] opacity-50 animate-blob"
+              style={{ animationDelay: "4s" }}
+            />
+          </div>
+          
+          <div className="flex flex-col items-center gap-4 p-8 rounded-xl backdrop-blur-md bg-background/30 z-10">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-lg font-medium">
               {isRedirecting ? "Redirecting to dashboard..." : "Loading..."}
@@ -122,8 +141,27 @@ export default function SignInPage() {
     <div className="flex min-h-screen flex-col">
       <NavBar activePath="/sign-in" />
 
-      <main className="flex-1 flex items-center justify-center py-12">
-        <Card className="w-full max-w-md mx-auto shadow-lg">
+      <main className="flex-1 flex items-center justify-center py-12 relative overflow-hidden">
+        {/* Blurry blob decorations */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Primary colored blob - top right */}
+          <div 
+            className="absolute top-[-15%] right-[-5%] w-[60%] h-[60%] rounded-full bg-primary/30 blur-[80px] opacity-70 animate-blob"
+            style={{ animationDelay: "0s" }}
+          />
+          {/* Secondary colored blob - bottom left */}
+          <div 
+            className="absolute bottom-[-5%] left-[-5%] w-[50%] h-[50%] rounded-full bg-blue-500/20 blur-[100px] opacity-60 animate-blob"
+            style={{ animationDelay: "2s" }}
+          />
+          {/* Tertiary colored blob - center right */}
+          <div 
+            className="absolute bottom-[15%] right-[0%] w-[40%] h-[40%] rounded-full bg-purple-500/20 blur-[80px] opacity-50 animate-blob"
+            style={{ animationDelay: "4s" }}
+          />
+        </div>
+        
+        <Card className="w-full max-w-md mx-auto shadow-lg backdrop-blur-md z-10 bg-background/95">
           <CardHeader className="space-y-1 text-center">
             <div className="flex justify-center mb-2">
               <Image
